@@ -1,0 +1,60 @@
+version: "2"
+services:
+  app:
+    build: .
+    environment:
+      - HOST=localhost
+      - PORT=3000
+      - CLAMAV_REST_HOST=clamav-rest
+      - CLAMAV_REST_PORT=8080
+      - AWS_ACCESS_KEY_ID=aws-access-key-id
+      - AWS_SECRET_ACCESS_KEY=aws-secret-access-key
+      - AWS_REGION=eu-west-1
+      - AWS_SIGNATURE_VERSION=v4
+      - AWS_BUCKET=aws-bucket
+    ports:
+      - "3000:3000"
+
+  nginx-proxy:
+    image: quay.io/ukhomeofficedigital/nginx-proxy:v1.5.1
+    environment:
+      - PROXY_SERVICE_HOST=proxy
+      - PROXY_SERVICE_PORT=3001
+      - NAXSI_USE_DEFAULT_RULES=FALSE
+      - ADD_NGINX_SERVER_CFG=add_header Cache-Control private;add_header X-Frame-Options "SAMEORIGIN" always;add_header X-Content-Type-Options "nosniff" always;add_header X-XSS-Protection "1; mode=block" always;
+      - ERROR_REDIRECT_CODES=599
+    ports:
+      - "443:443"
+      - "80:80"
+
+  proxy:
+    image: quay.io/ukhomeofficedigital/go-keycloak-proxy:v2.0.1
+    environment:
+      - PROXY_CLIENT_SECERT=proxy-client-secret
+      - PROXY_CLIENT_ID=proxy-client-id
+      - PROXY_DISCOVERY_URL=realm-url
+      - PROXY_LISTEN=proxy:3001
+      - PROXY_REDIRECTION_URL=https://localhost
+      - PROXY_UPSTREAM_URL=http://app:3000
+      - PROXY_REVOCATION_URL=revocation-url
+    entrypoint:
+      - /opt/keycloak-proxy
+      - --resources=uri=/|methods=GET|roles=caseworkers
+      - --log-requests=true
+      - --json-format=true
+      - --verbose
+    ports:
+      - "3001:3001"
+
+  clamav-server:
+    image: mkodockx/docker-clamav
+    ports:
+      - "3310:3310"
+
+  clamav-rest:
+    image: lokori/clamav-rest
+    environment:
+      - CLAMD_HOST=clamav-server
+    ports:
+      - "8080:8080"
+

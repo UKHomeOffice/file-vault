@@ -1,0 +1,31 @@
+{
+  "name": "file-vault",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UKHomeOffice/file-vault"
+  },
+  "description": "Allows POST and GET to a configured s3 bucket.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index"
+  },
+  "author": "UKHomeOffice",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.7.21",
+    "churchill": "^0.2.0",
+    "express": "^4.14.0",
+    "hof-logger": "^1.0.0",
+    "moment": "^2.17.1",
+    "multer": "^1.2.1",
+    "request": "^2.79.0",
+    "winston": "^1.1.2"
+  },
+  "devDependencies": {
+    "mocha": "^3.2.0",
+    "should": "^11.1.2",
+    "supertest": "^2.0.1"
+  }
+}
