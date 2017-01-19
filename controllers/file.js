@@ -71,11 +71,7 @@ function s3Upload(req, res, next) {
   });
 }
 
-function deleteUpload(req, res, next) {
-  fs.unlink(req.file.path, next);
-}
-
-router.post('/', upload.single('document'), clamAV, s3Upload, deleteUpload, (req, res) => {
+router.post('/', upload.single('document'), clamAV, s3Upload, (req, res) => {
   res.status(200).json({
     url: `http://${config.host}/file/${req.file.filename}`
   });

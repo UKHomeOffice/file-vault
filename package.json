@@ -21,6 +21,7 @@
     "hof-logger": "^1.0.0",
     "moment": "^2.17.1",
     "multer": "^1.2.1",
+    "on-finished": "^2.3.0",
     "request": "^2.79.0",
     "winston": "^1.1.2"
   },
