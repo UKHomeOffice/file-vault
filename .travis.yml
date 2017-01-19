@@ -10,4 +10,5 @@ before_install:
   - docker run -d --net=host -e NODE_ENV=ci travis
 
 script:
+  - npm run lint
   - npm run test

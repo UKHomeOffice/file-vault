@@ -1,38 +1,44 @@
 'use strict';
 
-const supertest = require('supertest');
-const should = require('should');
-const nock = require('nock');
+/* eslint no-process-env: 0 */
 
-describe('/file',() => {
+const supertest = require('supertest');
+const nock = require('nock');
+/* eslint-disable no-unused-vars */
+const should = require('should');
+/* eslint-enable no-unused-vars */
+
+describe('/file', () => {
 
   describe('POSTing', () => {
 
     describe('no data', () => {
-      it('returns an error',(done) => {
+      it('returns an error', (done) => {
         supertest(require('../app').app)
           .post('/file')
           .expect('Content-type', /json/)
           .expect(400, {
-            code:'FileNotFound'
-          }, done);
+            code: 'FileNotFound'
+          })
+          .end(done);
       });
     });
 
     describe('data', () => {
 
-      it('returns an error when virus scanner unavailable',(done) => {
+      it('returns an error when virus scanner unavailable', (done) => {
         supertest(require('../app').app)
           .post('/file')
           .attach('document', 'test/fixtures/cat.gif')
           .expect(400, {
-            code:'VirusScanFailed'
-          }, done);
+            code: 'VirusScanFailed'
+          })
+          .end(done);
       });
 
       describe('virus scanning', () => {
 
-        it('returns an error when virus scanner finds a virus!',(done) => {
+        it('returns an error when virus scanner finds a virus!', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
           delete require.cache[require.resolve('../config')];
@@ -49,14 +55,15 @@ describe('/file',() => {
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
-              code:'VirusFound'
-            }, done);
+              code: 'VirusFound'
+            })
+            .end(done);
         });
 
       });
 
       describe('putting the file into a bucket', () => {
-        it('returns an error when it fails to put',(done) => {
+        it('returns an error when it fails to put', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
           delete require.cache[require.resolve('../config')];
@@ -80,11 +87,12 @@ describe('/file',() => {
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
-              code:'S3PUTFailed'
-            }, done);
+              code: 'S3PUTFailed'
+            })
+            .end(done);
         });
 
-        it('returns a short url when it successfully puts',(done) => {
+        it('returns a short url when it successfully puts', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
           delete require.cache[require.resolve('../config')];
@@ -109,6 +117,9 @@ describe('/file',() => {
             .attach('document', 'test/fixtures/cat.gif')
             .expect(200)
             .end((err, res) => {
+              if (err) {
+                throw err;
+              }
               res.body.url.should.startWith('http://localhost/file/');
               done();
             });

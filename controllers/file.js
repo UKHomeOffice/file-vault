@@ -2,14 +2,16 @@
 
 const express = require('express');
 const router = express.Router();
-const multer  = require('multer');
+const multer = require('multer');
 const AWS = require('aws-sdk');
 const request = require('request');
 const moment = require('moment');
 const fs = require('fs');
 
-const upload = multer({ dest: 'uploads/' });
 const config = require('../config');
+const upload = multer({
+  dest: config.fileDestination
+});
 
 AWS.config.update({
   accessKeyId: config.aws.accessKeyId,
@@ -20,13 +22,7 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-router.post('/', upload.single('document'), clamAV, s3Upload, deleteUpload, (req, res, next) => {
-  res.status(200).json({
-    url: `http://${config.host}/file/${req.file.filename}`
-  });
-});
-
-function clamAV (req, res, next) {
+function clamAV(req, res, next) {
   if (req.file) {
     let fileData = {
       name: req.file.originalname,
@@ -54,9 +50,9 @@ function clamAV (req, res, next) {
       code: 'FileNotFound'
     });
   }
-};
+}
 
-function s3Upload (req, res, next) {
+function s3Upload(req, res, next) {
   const params = {
     Bucket: config.aws.bucket,
     Key: req.file.filename,
@@ -65,7 +61,7 @@ function s3Upload (req, res, next) {
     Expires: moment().add(config.aws.expiry, 'seconds').unix()
   };
 
-  s3.putObject(params, (err, data) => {
+  s3.putObject(params, (err) => {
     if (err) {
       err = {
         code: 'S3PUTFailed'
@@ -73,11 +69,17 @@ function s3Upload (req, res, next) {
     }
     next(err);
   });
-};
+}
 
-function deleteUpload (req, res, next) {
+function deleteUpload(req, res, next) {
   fs.unlink(req.file.path, next);
 }
+
+router.post('/', upload.single('document'), clamAV, s3Upload, deleteUpload, (req, res) => {
+  res.status(200).json({
+    url: `http://${config.host}/file/${req.file.filename}`
+  });
+});
 
 router.get('/:id', (req, res) => {
   s3.getObject({
@@ -90,4 +92,4 @@ router.get('/:id', (req, res) => {
   }).pipe(res);
 });
 
-module.exports = router
+module.exports = router;

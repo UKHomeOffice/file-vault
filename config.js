@@ -1,3 +1,6 @@
+'use strict';
+
+/* eslint no-process-env: 0 */
 module.exports = {
   host: process.env.HOST || 'localhost',
   port: process.env.PORT || 3000,
