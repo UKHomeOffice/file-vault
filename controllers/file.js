@@ -37,7 +37,6 @@ function clamAV (req, res, next) {
       url: `http://${config.clamRest.host}:${config.clamRest.port}/scan`,
       formData: fileData
     }, (err, httpResponse, body) => {
-
       if (err) {
         err = {
           code: 'VirusScanFailed'
