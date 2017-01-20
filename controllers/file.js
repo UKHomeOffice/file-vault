@@ -7,6 +7,7 @@ const AWS = require('aws-sdk');
 const request = require('request');
 const moment = require('moment');
 const fs = require('fs');
+const onFinished = require('on-finished');
 
 const config = require('../config');
 const upload = multer({
@@ -22,34 +23,41 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-function clamAV(req, res, next) {
+function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
-    let fileData = {
-      name: req.file.originalname,
-      file: fs.createReadStream(req.file.path)
-    };
-
-    request.post({
-      url: `http://${config.clamRest.host}:${config.clamRest.port}/scan`,
-      formData: fileData
-    }, (err, httpResponse, body) => {
-      if (err) {
-        err = {
-          code: 'VirusScanFailed'
-        };
-      } else if (body.indexOf('false') !== -1) {
-        err = {
-          code: 'VirusFound'
-        };
-      }
-
-      next(err);
+    onFinished(res, () => {
+      fs.unlink(req.file.path);
     });
+    next();
   } else {
     next({
       code: 'FileNotFound'
     });
   }
+}
+
+function clamAV(req, res, next) {
+  let fileData = {
+    name: req.file.originalname,
+    file: fs.createReadStream(req.file.path)
+  };
+
+  request.post({
+    url: `http://${config.clamRest.host}:${config.clamRest.port}/scan`,
+    formData: fileData
+  }, (err, httpResponse, body) => {
+    if (err) {
+      err = {
+        code: 'VirusScanFailed'
+      };
+    } else if (body.indexOf('false') !== -1) {
+      err = {
+        code: 'VirusFound'
+      };
+    }
+
+    next(err);
+  });
 }
 
 function s3Upload(req, res, next) {
@@ -71,7 +79,7 @@ function s3Upload(req, res, next) {
   });
 }
 
-router.post('/', upload.single('document'), clamAV, s3Upload, (req, res) => {
+router.post('/', upload.single('document'), deleteFileOnFinishedRequest, clamAV, s3Upload, (req, res) => {
   res.status(200).json({
     url: `http://${config.host}/file/${req.file.filename}`
   });

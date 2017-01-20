@@ -4,9 +4,7 @@
 
 const supertest = require('supertest');
 const nock = require('nock');
-/* eslint-disable no-unused-vars */
-const should = require('should');
-/* eslint-enable no-unused-vars */
+const assert = require('assert');
 
 describe('/file', () => {
 
@@ -120,7 +118,7 @@ describe('/file', () => {
               if (err) {
                 throw err;
               }
-              res.body.url.should.startWith('http://localhost/file/');
+              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
               done();
             });
         });
