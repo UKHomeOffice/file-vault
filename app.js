@@ -4,10 +4,9 @@ const express = require('express');
 const churchill = require('churchill');
 const logger = require('hof-logger')();
 const app = express();
+const config = require('config');
 
 app.use(churchill(logger));
-
-const config = require('./config');
 
 app.use('/file', require('./controllers/file'));
 
@@ -22,10 +21,9 @@ app.use((err, req, res, next) => {
   res.json(err);
 });
 
-
 module.exports.start = () => {
-  app.listen(config.port, () => {
-    logger.info(`Server started on port ${config.port}`);
+  app.listen(config.get('port'), () => {
+    logger.info(`Server started on port ${config.get('port')}`);
   });
 };
 
