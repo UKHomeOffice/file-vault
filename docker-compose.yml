@@ -12,6 +12,7 @@ services:
       - AWS_REGION=eu-west-1
       - AWS_SIGNATURE_VERSION=v4
       - AWS_BUCKET=aws-bucket
+      - AWS_EXPIRY_TIME=600
     ports:
       - "3000:3000"
 
@@ -57,4 +58,3 @@ services:
       - CLAMD_HOST=clamav-server
     ports:
       - "8080:8080"
-

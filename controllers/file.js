@@ -8,17 +8,17 @@ const request = require('request');
 const moment = require('moment');
 const fs = require('fs');
 const onFinished = require('on-finished');
+const config = require('config');
 
-const config = require('../config');
 const upload = multer({
-  dest: config.fileDestination
+  dest: config.get('fileDestination')
 });
 
 AWS.config.update({
-  accessKeyId: config.aws.accessKeyId,
-  secretAccessKey: config.aws.secretAccessKey,
-  region: config.aws.region,
-  signatureVersion: config.aws.signatureVersion
+  accessKeyId: config.get('aws.accessKeyId'),
+  secretAccessKey: config.get('aws.secretAccessKey'),
+  region: config.get('aws.region'),
+  signatureVersion: config.get('aws.signatureVersion')
 });
 
 const s3 = new AWS.S3();
@@ -43,7 +43,7 @@ function clamAV(req, res, next) {
   };
 
   request.post({
-    url: `http://${config.clamRest.host}:${config.clamRest.port}/scan`,
+    url: `http://${config.get('clamRest.host')}:${config.get('clamRest.port')}/scan`,
     formData: fileData
   }, (err, httpResponse, body) => {
     if (err) {
@@ -62,11 +62,11 @@ function clamAV(req, res, next) {
 
 function s3Upload(req, res, next) {
   const params = {
-    Bucket: config.aws.bucket,
+    Bucket: config.get('aws.bucket'),
     Key: req.file.filename,
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
-    Expires: moment().add(config.aws.expiry, 'seconds').unix()
+    Expires: moment().add(config.get('aws.expiry'), 'seconds').unix()
   };
 
   s3.putObject(params, (err) => {
@@ -81,13 +81,13 @@ function s3Upload(req, res, next) {
 
 router.post('/', upload.single('document'), deleteFileOnFinishedRequest, clamAV, s3Upload, (req, res) => {
   res.status(200).json({
-    url: `http://${config.host}/file/${req.file.filename}`
+    url: `http://${config.get('host')}/file/${req.file.filename}`
   });
 });
 
 router.get('/:id', (req, res) => {
   s3.getObject({
-    Bucket: config.aws.bucket,
+    Bucket: config.get('aws.bucket'),
     Key: req.params.id
   }).createReadStream().on('error', (err) => {
     if (err.statusCode === 404) {

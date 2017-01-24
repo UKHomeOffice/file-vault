@@ -1,0 +1,17 @@
+{
+  "host": "localhost",
+  "port": 3000,
+  "clamRest": {
+    "host": "CLAMAV_REST_HOST",
+    "port": "CLAMAV_REST_PORT"
+  },
+  "aws": {
+    "accessKeyId": "AWS_ACCESS_KEY_ID",
+    "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
+    "region": "eu-west-1",
+    "signatureVersion": "v4",
+    "bucket": "AWS_BUCKET",
+    "expiry": 600
+  },
+  "fileDestination": "uploads"
+}

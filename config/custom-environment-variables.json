@@ -1,0 +1,15 @@
+{
+  "clamRest": {
+    "host": "CLAMAV_REST_HOST",
+    "port": "CLAMAV_REST_PORT"
+  },
+  "aws": {
+    "accessKeyId": "AWS_ACCESS_KEY_ID",
+    "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
+    "region": "AWS_REGION",
+    "signatureVersion": "AWS_SIGNATURE_VERSION",
+    "bucket": "AWS_BUCKET",
+    "expiry": "AWS_EXPIRY_TIME"
+  },
+  "fileDestination": "STORAGE_FILE_DESTINATION"
+}

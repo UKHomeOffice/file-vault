@@ -39,7 +39,7 @@ describe('/file', () => {
         it('returns an error when virus scanner finds a virus!', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('../config')];
+          delete require.cache[require.resolve('config')];
           delete require.cache[require.resolve('../controllers/file')];
 
           // set some env vars for the clamav server
@@ -64,7 +64,7 @@ describe('/file', () => {
         it('returns an error when it fails to put', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('../config')];
+          delete require.cache[require.resolve('config')];
           delete require.cache[require.resolve('../controllers/file')];
 
           // set some env vars for the clamav server
@@ -93,7 +93,7 @@ describe('/file', () => {
         it('returns a short url when it successfully puts', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('../config')];
+          delete require.cache[require.resolve('config')];
           delete require.cache[require.resolve('../controllers/file')];
 
           // set some env vars for the clamav server
