@@ -43,8 +43,7 @@ describe('/file', () => {
           delete require.cache[require.resolve('../controllers/file')];
 
           // set some env vars for the clamav server
-          process.env.CLAMAV_REST_HOST = 'localhost';
-          process.env.CLAMAV_REST_PORT = 8080;
+          process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
 
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : false');
@@ -68,8 +67,7 @@ describe('/file', () => {
           delete require.cache[require.resolve('../controllers/file')];
 
           // set some env vars for the clamav server
-          process.env.CLAMAV_REST_HOST = 'localhost';
-          process.env.CLAMAV_REST_PORT = 8080;
+          process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
           process.env.AWS_BUCKET = 'testbucket';
           process.env.AWS_ACCESS_KEY_ID = 'test';
           process.env.AWS_SECRET_ACCESS_KEY = 'test';
@@ -97,8 +95,7 @@ describe('/file', () => {
           delete require.cache[require.resolve('../controllers/file')];
 
           // set some env vars for the clamav server
-          process.env.CLAMAV_REST_HOST = 'localhost';
-          process.env.CLAMAV_REST_PORT = 8080;
+          process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
           process.env.AWS_BUCKET = 'testbucket';
           process.env.AWS_ACCESS_KEY_ID = 'test';
           process.env.AWS_SECRET_ACCESS_KEY = 'test';
@@ -118,7 +115,7 @@ describe('/file', () => {
               if (err) {
                 throw err;
               }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
+              assert.ok(res.body.url.indexOf('https://localhost/file/') !== -1);
               done();
             });
         });

@@ -1,7 +1,6 @@
 {
   "clamRest": {
-    "host": "CLAMAV_REST_HOST",
-    "port": "CLAMAV_REST_PORT"
+    "url": "CLAMAV_REST_URL"
   },
   "aws": {
     "accessKeyId": "AWS_ACCESS_KEY_ID",

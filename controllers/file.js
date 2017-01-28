@@ -43,7 +43,7 @@ function clamAV(req, res, next) {
   };
 
   request.post({
-    url: `http://${config.get('clamRest.host')}:${config.get('clamRest.port')}/scan`,
+    url: ${config.get('clamRest.url')},
     formData: fileData
   }, (err, httpResponse, body) => {
     if (err) {
@@ -81,7 +81,7 @@ function s3Upload(req, res, next) {
 
 router.post('/', upload.single('document'), deleteFileOnFinishedRequest, clamAV, s3Upload, (req, res) => {
   res.status(200).json({
-    url: `http://${config.get('host')}/file/${req.file.filename}`
+    url: `https://${config.get('host')}/file/${req.file.filename}`
   });
 });
 
