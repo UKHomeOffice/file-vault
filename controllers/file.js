@@ -47,6 +47,7 @@ function clamAV(req, res, next) {
     formData: fileData
   }, (err, httpResponse, body) => {
     if (err) {
+      req.logger.error(err);
       err = {
         code: 'VirusScanFailed'
       };
@@ -71,6 +72,7 @@ function s3Upload(req, res, next) {
 
   s3.putObject(params, (err) => {
     if (err) {
+      req.logger.error(err);
       err = {
         code: 'S3PUTFailed'
       };
@@ -90,6 +92,7 @@ router.get('/:id', (req, res) => {
     Bucket: config.get('aws.bucket'),
     Key: req.params.id
   }).createReadStream().on('error', (err) => {
+    req.logger.error(err);
     if (err.statusCode === 404) {
       res.status(404).end();
     }
