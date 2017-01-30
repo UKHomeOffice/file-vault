@@ -101,6 +101,7 @@ describe('/file', () => {
           process.env.AWS_SECRET_ACCESS_KEY = 'test';
           process.env.AWS_REGION = 'eu-west-1';
           process.env.AWS_SIGNATURE_VERSION = 'v4';
+          process.env.FILE_VAULT_URL = 'https://myfile-vault-url';
 
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
@@ -115,7 +116,7 @@ describe('/file', () => {
               if (err) {
                 throw err;
               }
-              assert.ok(res.body.url.indexOf('https://localhost/file/') !== -1);
+              assert.ok(res.body.url.indexOf('https://myfile-vault-url/file/') !== -1);
               done();
             });
         });

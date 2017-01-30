@@ -1,4 +1,5 @@
 {
+  "file-vault-url": "FILE_VAULT_URL",
   "clamRest": {
     "url": "CLAMAV_REST_URL"
   },
