@@ -5,14 +5,14 @@ services:
     environment:
       - HOST=localhost
       - PORT=3000
-      - CLAMAV_REST_HOST=clamav-rest
-      - CLAMAV_REST_PORT=8080
+      - CLAMAV_REST_URL=http://clamav-rest:8080/scan
       - AWS_ACCESS_KEY_ID=aws-access-key-id
       - AWS_SECRET_ACCESS_KEY=aws-secret-access-key
       - AWS_REGION=eu-west-1
       - AWS_SIGNATURE_VERSION=v4
       - AWS_BUCKET=aws-bucket
       - AWS_EXPIRY_TIME=600
+      - NODE_ENV=development
     ports:
       - "3000:3000"
 
