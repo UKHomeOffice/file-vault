@@ -11,5 +11,6 @@
     "bucket": "AWS_BUCKET",
     "expiry": "AWS_EXPIRY_TIME"
   },
-  "fileDestination": "STORAGE_FILE_DESTINATION"
+  "fileDestination": "STORAGE_FILE_DESTINATION",
+  "timeout": "REQUEST_TIMEOUT"
 }

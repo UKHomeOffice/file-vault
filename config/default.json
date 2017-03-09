@@ -12,5 +12,6 @@
     "bucket": "AWS_BUCKET",
     "expiry": 600
   },
-  "fileDestination": "uploads"
+  "fileDestination": "uploads",
+  "timeout": 15000
 }
