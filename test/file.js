@@ -88,6 +88,23 @@ describe('/file', () => {
             .end(done);
         });
 
+        it('returns an error when file extension is not in white-list', (done) => {
+          // delete the require cache
+          delete require.cache[require.resolve('../app')];
+          delete require.cache[require.resolve('config')];
+          delete require.cache[require.resolve('../controllers/file')];
+
+          process.env.FILE_EXTENSION_WHITELIST = 'jpg,jpeg,pdf,svg,txt,doc';
+
+          supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(400, {
+              code: 'FileExtensionNotAllowed'
+            })
+            .end(done);
+        });
+
         it('returns a short url when it successfully puts', (done) => {
           // delete the require cache
           delete require.cache[require.resolve('../app')];
@@ -102,6 +119,7 @@ describe('/file', () => {
           process.env.AWS_REGION = 'eu-west-1';
           process.env.AWS_SIGNATURE_VERSION = 'v4';
           process.env.FILE_VAULT_URL = 'https://myfile-vault-url';
+          process.env.FILE_EXTENSION_WHITELIST = 'gif';
 
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');

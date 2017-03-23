@@ -10,8 +10,9 @@
     "region": "eu-west-1",
     "signatureVersion": "v4",
     "bucket": "AWS_BUCKET",
-    "expiry": 600
+    "expiry": 3600
   },
   "fileDestination": "uploads",
-  "timeout": 15000
+  "timeout": 15000,
+  "fileTypes": ""
 }
