@@ -5,7 +5,6 @@ const router = express.Router();
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const request = require('request');
-const moment = require('moment');
 const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
@@ -26,6 +25,25 @@ const s3 = new AWS.S3();
 function logError(req, err) {
   if (req.logger && req.logger.error) {
     req.logger.error(err);
+  }
+}
+
+function checkExtension(req, res, next) {
+  const fileTypes = config.get('fileTypes');
+
+  if (fileTypes) {
+    const uploadedFileExtension = req.file.originalname.split('.').pop();
+    const fileAllowed = fileTypes.split(',')
+      .find((allowedExtension) => uploadedFileExtension === allowedExtension);
+    if (fileAllowed) {
+      next();
+    } else {
+      next({
+        code: 'FileExtensionNotAllowed'
+      });
+    }
+  } else {
+    next();
   }
 }
 
@@ -71,39 +89,49 @@ function clamAV(req, res, next) {
 function s3Upload(req, res, next) {
   const params = {
     Bucket: config.get('aws.bucket'),
-    Key: req.file.filename,
-    Body: fs.createReadStream(req.file.path),
-    ServerSideEncryption: 'aws:kms',
-    Expires: moment().add(config.get('aws.expiry'), 'seconds').unix()
+    Key: req.file.filename
   };
 
-  s3.putObject(params, (err) => {
+  s3.putObject(Object.assign({}, params, {
+    Body: fs.createReadStream(req.file.path),
+    ServerSideEncryption: 'aws:kms',
+    ContentType: req.file.mimetype
+  }), (err) => {
     if (err) {
       logError(req, err);
       err = {
         code: 'S3PUTFailed'
       };
+    } else {
+      req.s3Path = s3.getSignedUrl('getObject', Object.assign({}, params, {
+        Expires: config.get('aws.expiry')
+      })).split('.com/').pop();
     }
     next(err);
   });
 }
 
-router.post('/', upload.single('document'), deleteFileOnFinishedRequest, clamAV, s3Upload, (req, res) => {
+router.post('/', upload.single('document'), checkExtension, deleteFileOnFinishedRequest, clamAV, s3Upload, (req, res) => {
   res.status(200).json({
-    url: `${config.get('file-vault-url')}/file/${req.file.filename}`
+    url: `${config.get('file-vault-url')}/file/${req.s3Path}`
   });
 });
 
 router.get('/:id', (req, res) => {
-  s3.getObject({
-    Bucket: config.get('aws.bucket'),
-    Key: req.params.id
-  }).createReadStream().on('error', (err) => {
-    logError(req, err);
-    if (err.statusCode === 404) {
-      res.status(404).end();
+  request.get({
+    url: `https://${config.get('aws.bucket')}.s3-${config.get('aws.region')}.amazonaws.com${req.url}`,
+    encoding: null
+  }, (err, resp, buffer) => {
+    if (err) {
+      logError(req, err);
     }
-  }).pipe(res);
+    if (resp.statusCode !== 200) {
+      res.status(resp.statusCode).end();
+    } else {
+      res.writeHead(200, resp.headers);
+      res.end(buffer);
+    }
+  });
 });
 
 module.exports = router;
