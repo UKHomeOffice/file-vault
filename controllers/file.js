@@ -8,6 +8,7 @@ const request = require('request');
 const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
+const path = require('path');
 
 const upload = multer({
   dest: config.get('fileDestination')
@@ -32,7 +33,7 @@ function checkExtension(req, res, next) {
   const fileTypes = config.get('fileTypes');
 
   if (fileTypes) {
-    const uploadedFileExtension = req.file.originalname.split('.').pop();
+    const uploadedFileExtension = path.extname(req.file.originalname).replace('.', '');
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
@@ -69,7 +70,7 @@ function clamAV(req, res, next) {
   request.post({
     url: config.get('clamRest.url'),
     formData: fileData,
-    timeout: config.get('timeout')
+    timeout: config.get('timeout') * 1000
   }, (err, httpResponse, body) => {
     if (err) {
       logError(req, err);
@@ -111,16 +112,24 @@ function s3Upload(req, res, next) {
   });
 }
 
-router.post('/', upload.single('document'), checkExtension, deleteFileOnFinishedRequest, clamAV, s3Upload, (req, res) => {
-  res.status(200).json({
-    url: `${config.get('file-vault-url')}/file/${req.s3Path}`
-  });
-});
+router.post('/', [
+  upload.single('document'),
+  checkExtension,
+  deleteFileOnFinishedRequest,
+  clamAV,
+  s3Upload,
+  (req, res) => {
+    res.status(200).json({
+      url: `${config.get('file-vault-url')}/file/${req.s3Path}`
+    });
+  }
+]);
 
 router.get('/:id', (req, res) => {
   request.get({
     url: `https://${config.get('aws.bucket')}.s3-${config.get('aws.region')}.amazonaws.com${req.url}`,
-    encoding: null
+    encoding: null,
+    timeout: config.get('timeout') * 1000
   }, (err, resp, buffer) => {
     if (err) {
       logError(req, err);

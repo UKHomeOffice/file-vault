@@ -13,6 +13,6 @@
     "expiry": 3600
   },
   "fileDestination": "uploads",
-  "timeout": 15000,
+  "timeout": 15,
   "fileTypes": ""
 }
