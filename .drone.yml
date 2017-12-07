@@ -22,7 +22,7 @@ pipeline:
     environment:
       - DOCKER_HOST=tcp://127.0.0.1:2375
     commands:
-      - docker build -t file-vault-{DRONE_COMMIT_SHA} .
+      - docker build -t file-vault-${DRONE_COMMIT_SHA} .
     when:
       branch: master
       event: push
@@ -33,7 +33,7 @@ pipeline:
       - DOCKER_HOST=tcp://127.0.0.1:2375
     commands:
       - docker login -u="ukhomeofficedigital+drone" -p=${DOCKER_PASSWORD} quay.io
-      - docker tag file-vault-{DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
+      - docker tag file-vault-${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
       - docker push quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
     when:
       branch: master
