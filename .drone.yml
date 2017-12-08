@@ -3,7 +3,6 @@ pipeline:
     image: node:6
     commands:
       - npm --loglevel warn install
-      - npm run lint
       - npm run test
     when:
       event: [push, pull_request]

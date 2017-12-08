@@ -1,6 +1,7 @@
 language: node_js
 node_js:
   - "6"
+  - "8"
 
 services:
   - docker
@@ -8,7 +9,3 @@ services:
 before_install:
   - docker build --tag travis .
   - docker run -d --net=host -e NODE_ENV=ci travis
-
-script:
-  - npm run lint
-  - npm run test
