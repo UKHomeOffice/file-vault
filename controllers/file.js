@@ -125,7 +125,7 @@ router.post('/', [
   }
 ]);
 
-router.get('/:id', (req, res) => {
+router.get('/:id', (req, res, next) => {
   request.get({
     url: `https://${config.get('aws.bucket')}.s3-${config.get('aws.region')}.amazonaws.com${req.url}`,
     encoding: null,
@@ -133,13 +133,10 @@ router.get('/:id', (req, res) => {
   }, (err, resp, buffer) => {
     if (err) {
       logError(req, err);
+      return next(err);
     }
-    if (resp.statusCode !== 200) {
-      res.status(resp.statusCode).end();
-    } else {
-      res.writeHead(200, resp.headers);
-      res.end(buffer);
-    }
+    res.writeHead(resp.statusCode, resp.headers);
+    res.end(buffer);
   });
 });
 
