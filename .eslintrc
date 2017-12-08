@@ -3,3 +3,6 @@ extends:
 
 env:
   es6: true
+
+rules:
+  consistent-return: off
