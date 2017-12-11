@@ -127,7 +127,7 @@ router.post('/', [
 
 router.get('/:id', (req, res, next) => {
   request.get({
-    url: `https://${config.get('aws.bucket')}.s3-${config.get('aws.region')}.amazonaws.com${req.url}`,
+    url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com${req.url}`,
     encoding: null,
     timeout: config.get('timeout') * 1000
   }, (err, resp, buffer) => {
