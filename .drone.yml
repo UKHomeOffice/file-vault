@@ -1,6 +1,6 @@
 pipeline:
-  build_6:
-    image: node:6
+  build_8:
+    image: node:8
     commands:
       - npm --loglevel warn install
       - npm run test
