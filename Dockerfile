@@ -4,7 +4,7 @@ COPY package.json /app/package.json
 RUN npm --loglevel warn install --production --no-optional
 COPY . /app
 
-USER nodejs
+USER 999
 
 ENTRYPOINT ["node"]
 
