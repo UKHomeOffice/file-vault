@@ -10,6 +10,7 @@ The following environment variables are used to configure file-vault.
   CLAMAV_REST_URL           | Location of ClamAV rest service
   AWS_ACCESS_KEY_ID         | AWS Key ID
   AWS_SECRET_ACCESS_KEY     | AWS Secret Access Key
+  AWS_KMS_KEY_ID            | AWS KMS Key ID
   AWS_REGION                | AWS Region (defaults to eu-west-1)
   AWS_SIGNATURE_VERSION     | AWS Signature Version (defaults to v4)
   AWS_BUCKET                | AWS Bucket Name
