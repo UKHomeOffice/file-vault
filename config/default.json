@@ -7,6 +7,7 @@
   "aws": {
     "accessKeyId": "AWS_ACCESS_KEY_ID",
     "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
+    "kmsKeyId": "AWS_KMS_KEY_ID",
     "region": "eu-west-1",
     "signatureVersion": "v4",
     "bucket": "AWS_BUCKET",

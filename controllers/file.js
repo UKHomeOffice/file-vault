@@ -96,6 +96,7 @@ function s3Upload(req, res, next) {
   s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
+    SSEKMSKeyId: config.get('aws.kmsKeyId'),
     ContentType: req.file.mimetype
   }), (err) => {
     if (err) {
