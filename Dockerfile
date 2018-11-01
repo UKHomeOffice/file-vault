@@ -1,11 +1,16 @@
-FROM quay.io/ukhomeofficedigital/nodejs-base:v8
+FROM node:10-alpine
 
-COPY package.json /app/package.json
-RUN npm --loglevel warn install --production --no-optional
-COPY . /app
+RUN apk upgrade --no-cache
+RUN addgroup -S app
+RUN adduser -S app -G app -u 999 -h /app/
+RUN chown -R app:app /app/
 
 USER 999
+WORKDIR /app
 
-ENTRYPOINT ["node"]
+COPY package.json /app/package.json
+COPY package-lock.json /app/package-lock.json
+RUN npm ci --production --no-optional --ignore-scripts
+COPY . /app
 
-CMD ["/app/index.js"]
+CMD node index.js
