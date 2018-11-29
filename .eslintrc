@@ -4,5 +4,8 @@ extends:
 env:
   es6: true
 
+globals:
+  URL: true
+
 rules:
   consistent-return: off

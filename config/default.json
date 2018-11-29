@@ -11,7 +11,9 @@
     "region": "eu-west-1",
     "signatureVersion": "v4",
     "bucket": "AWS_BUCKET",
-    "expiry": 3600
+    "expiry": 3600,
+    "amzAlgorithm": "AWS4-HMAC-SHA256",
+    "password": "changeme"
   },
   "fileDestination": "uploads",
   "timeout": 15,
