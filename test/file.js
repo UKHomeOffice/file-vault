@@ -69,9 +69,9 @@ describe('/file', () => {
           // set some env vars for the clamav server
           process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
           process.env.AWS_BUCKET = 'testbucket';
-          process.env.AWS_ACCESS_KEY_ID = 'test';
-          process.env.AWS_SECRET_ACCESS_KEY = 'test';
-          process.env.AWS_KMS_KEY_ID = 'test';
+          process.env.AWS_ACCESS_KEY_ID = 'test_key_id';
+          process.env.AWS_SECRET_ACCESS_KEY = 'test_secret_key';
+          process.env.AWS_KMS_KEY_ID = 'test_kms_key';
           process.env.AWS_REGION = 'eu-west-1';
           process.env.AWS_SIGNATURE_VERSION = 'v4';
 
@@ -115,9 +115,9 @@ describe('/file', () => {
           // set some env vars for the clamav server
           process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
           process.env.AWS_BUCKET = 'testbucket';
-          process.env.AWS_ACCESS_KEY_ID = 'test';
-          process.env.AWS_SECRET_ACCESS_KEY = 'test';
-          process.env.AWS_KMS_KEY_ID = 'test';
+          process.env.AWS_ACCESS_KEY_ID = 'test_key_id';
+          process.env.AWS_SECRET_ACCESS_KEY = 'test_secret_key';
+          process.env.AWS_KMS_KEY_ID = 'test_kms_key';
           process.env.AWS_REGION = 'eu-west-1';
           process.env.AWS_SIGNATURE_VERSION = 'v4';
           process.env.FILE_VAULT_URL = 'https://myfile-vault-url';

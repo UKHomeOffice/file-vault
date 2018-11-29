@@ -9,6 +9,11 @@ const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
 const path = require('path');
+const { URL } = require('url');
+
+const crypto = require('crypto');
+const algorithm = 'aes-256-ctr';
+const password = config.get('aws.password');
 
 const upload = multer({
   dest: config.get('fileDestination')
@@ -105,12 +110,26 @@ function s3Upload(req, res, next) {
         code: 'S3PUTFailed'
       };
     } else {
-      req.s3Path = s3.getSignedUrl('getObject', Object.assign({}, params, {
+      req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
-      })).split('.com/').pop();
+      }));
     }
     next(err);
   });
+}
+
+function encrypt(text) {
+  const cipher = crypto.createCipher(algorithm, password);
+  let crypted = cipher.update(text, 'utf8', 'hex');
+  crypted += cipher.final('hex');
+  return crypted;
+}
+
+function decrypt(text) {
+  const decipher = crypto.createDecipher(algorithm, password);
+  let dec = decipher.update(text, 'hex', 'utf8');
+  dec += decipher.final('utf8');
+  return dec;
 }
 
 router.post('/', [
@@ -120,15 +139,29 @@ router.post('/', [
   clamAV,
   s3Upload,
   (req, res) => {
+    const s3Url = new URL(req.s3Url);
+    const s3Item = s3Url.pathname;
+    const Date = s3Url.searchParams.get('X-Amz-Date');
+    const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
+
     res.status(200).json({
-      url: `${config.get('file-vault-url')}/file/${req.s3Path}`
+      url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
     });
   }
 ]);
 
 router.get('/:id', (req, res, next) => {
+  let params = `?X-Amz-Algorithm=${config.get('aws.amzAlgorithm')}`;
+  params += `&X-Amz-Credential=${config.get('aws.secretAccessKey')}`;
+  params += `%2F${req.param.date.split('T')[0]}`;
+  params += `%2F${config.get('region')}%2Fs3%2Faws4_request`;
+  params += `&X-Amz-Date=${req.query.date}`;
+  params += `&X-Amz-Expires=${config.get('aws.expiry')}`;
+  params += `&X-Amz-Signature=${decrypt(req.query.id)}`;
+  params += '&X-Amz-SignedHeaders=host';
+
   request.get({
-    url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com${req.url}`,
+    url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
     encoding: null,
     timeout: config.get('timeout') * 1000
   }, (err, resp, buffer) => {
