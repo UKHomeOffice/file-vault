@@ -9,7 +9,7 @@ const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
 const path = require('path');
-const { URL } = require('url');
+const {URL} = require('url');
 
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
