@@ -8,7 +8,21 @@ const assert = require('assert');
 
 describe('/file', () => {
 
+  describe('config', () => {
+    it('returns an error if the default password isnt changed', () => {
+      assert.throws(() => require('../controllers/file'), Error, 'please set the AWS_PASSWORD');
+    });
+  });
+
   describe('POSTing', () => {
+    beforeEach(() => {
+      process.env.AWS_PASSWORD = 'atest';
+
+      // delete the require cache
+      delete require.cache[require.resolve('../app')];
+      delete require.cache[require.resolve('config')];
+      delete require.cache[require.resolve('../controllers/file')];
+    });
 
     describe('no data', () => {
       it('returns an error', (done) => {
@@ -37,11 +51,6 @@ describe('/file', () => {
       describe('virus scanning', () => {
 
         it('returns an error when virus scanner finds a virus!', (done) => {
-          // delete the require cache
-          delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('config')];
-          delete require.cache[require.resolve('../controllers/file')];
-
           // set some env vars for the clamav server
           process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
 
@@ -61,11 +70,6 @@ describe('/file', () => {
 
       describe('putting the file into a bucket', () => {
         it('returns an error when it fails to put', (done) => {
-          // delete the require cache
-          delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('config')];
-          delete require.cache[require.resolve('../controllers/file')];
-
           // set some env vars for the clamav server
           process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
           process.env.AWS_BUCKET = 'testbucket';
@@ -90,11 +94,6 @@ describe('/file', () => {
         });
 
         it('returns an error when file extension is not in white-list', (done) => {
-          // delete the require cache
-          delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('config')];
-          delete require.cache[require.resolve('../controllers/file')];
-
           process.env.FILE_EXTENSION_WHITELIST = 'jpg,jpeg,pdf,svg,txt,doc';
 
           supertest(require('../app').app)
@@ -107,11 +106,6 @@ describe('/file', () => {
         });
 
         it('returns a short url when it successfully puts', (done) => {
-          // delete the require cache
-          delete require.cache[require.resolve('../app')];
-          delete require.cache[require.resolve('config')];
-          delete require.cache[require.resolve('../controllers/file')];
-
           // set some env vars for the clamav server
           process.env.CLAMAV_REST_URL = 'http://localhost:8080/scan';
           process.env.AWS_BUCKET = 'testbucket';

@@ -11,7 +11,7 @@
     "signatureVersion": "AWS_SIGNATURE_VERSION",
     "bucket": "AWS_BUCKET",
     "expiry": "AWS_EXPIRY_TIME",
-    "password": "PASSWORD"
+    "password": "AWS_PASSWORD"
   },
   "fileDestination": "STORAGE_FILE_DESTINATION",
   "timeout": "REQUEST_TIMEOUT",

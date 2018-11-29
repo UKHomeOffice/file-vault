@@ -15,6 +15,10 @@ const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
 const password = config.get('aws.password');
 
+if (password === 'changeme') {
+  throw new Error('please set the AWS_PASSWORD');
+}
+
 const upload = multer({
   dest: config.get('fileDestination')
 });
