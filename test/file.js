@@ -78,11 +78,12 @@ describe('/file', () => {
           process.env.AWS_KMS_KEY_ID = 'test_kms_key';
           process.env.AWS_REGION = 'eu-west-1';
           process.env.AWS_SIGNATURE_VERSION = 'v4';
+          process.env.FILE_EXTENSION_WHITELIST = 'gif';
 
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
-          nock('https://testbucket.s3.amazonaws.com').put(/.*/).reply(400);
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(400);
 
           supertest(require('../app').app)
             .post('/file')
@@ -120,7 +121,7 @@ describe('/file', () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
-          nock('https://testbucket.s3.amazonaws.com').put(/.*/).reply(200);
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
 
           supertest(require('../app').app)
             .post('/file')
@@ -131,6 +132,37 @@ describe('/file', () => {
                 throw err;
               }
               assert.ok(res.body.url.indexOf('https://myfile-vault-url/file/') !== -1);
+              done();
+            });
+        });
+
+      });
+
+      describe('GETing a resource', () => {
+        it('makes a AWS signedUrl', (done) => {
+          process.env.AWS_BUCKET = 'testbucket';
+          process.env.AWS_SECRET_ACCESS_KEY = 'test_secret_key';
+
+          // assert the correct bucket item gets called
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com')
+            .get('/821898ae17bead075c0b6480734c56c9')
+            .query({
+              'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+              'X-Amz-Credential': 'test_secret_key/20181129/eu-west-1/s3/aws4_request',
+              'X-Amz-Date': '20181129T224820Z',
+              'X-Amz-Expires': '3600',
+              'X-Amz-Signature': 'fb16cae894e9b2e9af74e36cf5cf456ce130f0026b6485b113ee335322de0712',
+              'X-Amz-SignedHeaders': 'host'
+            })
+            .reply(200);
+
+          supertest(require('../app').app)
+            .get('/file/821898ae17bead075c0b6480734c56c9?date=20181129T224820Z&id=70078d4568a7cd716b36a2b89feb13c8adaab9a0751253115046fc7cc0708bcf2102d6f670cc56646c69a4a6338fb2e79dae049b74873adecbf96e1f563debb1')
+            .expect(200)
+            .end((err, res) => {
+              if (err) {
+                throw err;
+              }
               done();
             });
         });
