@@ -155,7 +155,7 @@ router.post('/', [
 
 router.get('/:id', (req, res, next) => {
   let params = `?X-Amz-Algorithm=${config.get('aws.amzAlgorithm')}`;
-  params += `&X-Amz-Credential=${config.get('aws.secretAccessKey')}`;
+  params += `&X-Amz-Credential=${config.get('aws.accessKeyId')}`;
   params += `%2F${req.query.date.split('T')[0]}`;
   params += `%2F${config.get('aws.region')}%2Fs3%2Faws4_request`;
   params += `&X-Amz-Date=${req.query.date}`;
