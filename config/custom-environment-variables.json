@@ -3,7 +3,8 @@
   "aws": {
     "region": "AWS_REGION",
     "signatureVersion": "AWS_SIGNATURE_VERSION",
-    "expiry": "AWS_EXPIRY_TIME"
+    "expiry": "AWS_EXPIRY_TIME",
+    "password": "AWS_PASSWORD"
   },
   "fileDestination": "STORAGE_FILE_DESTINATION",
   "timeout": "REQUEST_TIMEOUT",
