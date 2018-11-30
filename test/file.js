@@ -13,6 +13,9 @@ describe('/file', () => {
     delete require.cache[require.resolve('../app')];
     delete require.cache[require.resolve('config')];
     delete require.cache[require.resolve('../controllers/file')];
+
+    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}}';
+    process.env.NODE_CONFIG = '{"fileTypes": ""}';
   });
 
   describe('config', () => {
@@ -20,8 +23,6 @@ describe('/file', () => {
       process.env.NODE_CONFIG = '{"aws": {"password":""}}';
 
       assert.throws(() => require('../controllers/file'), Error, 'please set the AWS_PASSWORD');
-
-      process.env.NODE_CONFIG = '{"aws": {"password":"atest"}}';
     });
   });
 
@@ -93,10 +94,7 @@ describe('/file', () => {
             .expect(400, {
               code: 'FileExtensionNotAllowed'
             })
-            .end(() => {
-              process.env.NODE_CONFIG = '{"fileTypes": ""}';
-              done();
-            });
+            .end(done);
         });
 
         it('returns a short url when it successfully puts', (done) => {
