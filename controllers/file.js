@@ -15,7 +15,7 @@ const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
 const password = config.get('aws.password');
 
-if (password === 'changeme') {
+if (password === '') {
   throw new Error('please set the AWS_PASSWORD');
 }
 
@@ -75,7 +75,6 @@ function clamAV(req, res, next) {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
-
   request.post({
     url: config.get('clamRest.url'),
     formData: fileData,
