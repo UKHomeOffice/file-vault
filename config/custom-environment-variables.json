@@ -1,8 +1,15 @@
 {
   "file-vault-url": "FILE_VAULT_URL",
+  "clamRest": {
+    "url": "CLAMAV_REST_URL"
+  },
   "aws": {
+    "accessKeyId": "AWS_ACCESS_KEY_ID",
+    "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
+    "kmsKeyId": "AWS_KMS_KEY_ID",
     "region": "AWS_REGION",
     "signatureVersion": "AWS_SIGNATURE_VERSION",
+    "bucket": "AWS_BUCKET",
     "expiry": "AWS_EXPIRY_TIME",
     "password": "AWS_PASSWORD"
   },
