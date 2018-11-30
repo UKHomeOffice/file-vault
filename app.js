@@ -6,7 +6,9 @@ const logger = require('hof-logger')();
 const app = express();
 const config = require('config');
 
-app.use(churchill(logger));
+if (config.util.getEnv() === 'production') {
+  app.use(churchill(logger));
+}
 
 app.use('/file', require('./controllers/file'));
 

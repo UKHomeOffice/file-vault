@@ -13,7 +13,7 @@
     "bucket": "AWS_BUCKET",
     "expiry": 3600,
     "amzAlgorithm": "AWS4-HMAC-SHA256",
-    "password": "changeme"
+    "password": ""
   },
   "fileDestination": "uploads",
   "timeout": 15,

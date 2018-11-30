@@ -10,7 +10,7 @@
   "scripts": {
     "test": "npm run test:lint && npm run test:unit",
     "test:lint": "eslint .",
-    "test:unit": "mocha test/",
+    "test:unit": "NODE_ENV=test mocha test/",
     "start": "node index"
   },
   "author": "UKHomeOffice",

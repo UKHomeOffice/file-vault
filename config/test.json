@@ -1,0 +1,12 @@
+{
+  "clamRest": {
+    "url": "http://localhost:8080/scan"
+  },
+  "aws": {
+    "password": "atest",
+    "bucket": "testbucket",
+    "secretAccessKey": "test_secret_key",
+    "accessKeyId": "test_key_id",
+    "kmsKeyId": "test_kms_key"
+  }
+}
