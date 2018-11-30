@@ -131,7 +131,7 @@ describe('/file', () => {
             .get('/821898ae17bead075c0b6480734c56c9')
             .query({
               'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
-              'X-Amz-Credential': 'test_secret_key/20181129/eu-west-1/s3/aws4_request',
+              'X-Amz-Credential': 'test_key_id/20181129/eu-west-1/s3/aws4_request',
               'X-Amz-Date': '20181129T224820Z',
               'X-Amz-Expires': '3600',
               'X-Amz-Signature': 'fb16cae894e9b2e9af74e36cf5cf456ce130f0026b6485b113ee335322de0712',
