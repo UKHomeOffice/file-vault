@@ -140,6 +140,11 @@ describe('/file', () => {
 
       describe('GETing a resource', () => {
         it('makes a AWS signedUrl', (done) => {
+          const fileVaultUrl = '/file/821898ae17bead075c0b6480734c56c9';
+          const dateParam = 'date=20181129T224820Z';
+          /* eslint-disable max-len */
+          const idParam = 'id=70078d4568a7cd716b36a2b89feb13c8adaab9a0751253115046fc7cc0708bcf2102d6f670cc56646c69a4a6338fb2e79dae049b74873adecbf96e1f563debb1';
+          /* eslint-enable max-len */
           process.env.AWS_BUCKET = 'testbucket';
           process.env.AWS_SECRET_ACCESS_KEY = 'test_secret_key';
 
@@ -157,14 +162,9 @@ describe('/file', () => {
             .reply(200);
 
           supertest(require('../app').app)
-            .get('/file/821898ae17bead075c0b6480734c56c9?date=20181129T224820Z&id=70078d4568a7cd716b36a2b89feb13c8adaab9a0751253115046fc7cc0708bcf2102d6f670cc56646c69a4a6338fb2e79dae049b74873adecbf96e1f563debb1')
+            .get(`${fileVaultUrl}?${dateParam}&${idParam}`)
             .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              done();
-            });
+            .end(done);
         });
       });
 
