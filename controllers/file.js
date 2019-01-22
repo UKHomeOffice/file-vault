@@ -82,15 +82,18 @@ function clamAV(req, res, next) {
   }, (err, httpResponse, body) => {
     if (err) {
       logError(req, err);
-      err = {
+      const error = {
+        message: err,
         code: 'VirusScanFailed'
       };
+      err = error;
     } else if (body.indexOf('false') !== -1) {
-      err = {
+      const error = {
+        message: err,
         code: 'VirusFound'
       };
+      err = error;
     }
-
     next(err);
   });
 }
@@ -109,9 +112,11 @@ function s3Upload(req, res, next) {
   }), (err) => {
     if (err) {
       logError(req, err);
-      err = {
+      const error = {
+        message: err,
         code: 'S3PUTFailed'
       };
+      err = error;
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
