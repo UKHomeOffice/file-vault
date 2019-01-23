@@ -5,6 +5,8 @@
 const supertest = require('supertest');
 const nock = require('nock');
 const assert = require('assert');
+const chai = require('chai');
+const expect = chai.expect;
 
 describe('/file', () => {
 
@@ -47,7 +49,14 @@ describe('/file', () => {
           .post('/file')
           .attach('document', 'test/fixtures/cat.gif')
           .expect(400, {
-            code: 'VirusScanFailed'
+            code: 'VirusScanFailed',
+            message: {
+              address: '127.0.0.1',
+              code: 'ECONNREFUSED',
+              errno: 'ECONNREFUSED',
+              port: 8080,
+              syscall: 'connect'
+            }
           })
           .end(done);
       });
@@ -62,7 +71,8 @@ describe('/file', () => {
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
-              code: 'VirusFound'
+              code: 'VirusFound',
+              message: null
             })
             .end(done);
         });
@@ -79,10 +89,12 @@ describe('/file', () => {
           supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
-            .expect(400, {
-              code: 'S3PUTFailed'
+            .expect(400)
+            .then(response => {
+              expect(response.body).include({code: 'S3PUTFailed'});
+              done();
             })
-            .end(done);
+            .catch(err=> console.log(err));
         });
 
         it('returns an error when file extension is not in white-list', (done) => {
