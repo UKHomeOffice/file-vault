@@ -6,7 +6,7 @@ const logger = require('hof-logger')();
 const app = express();
 const config = require('config');
 
-if (config.util.getEnv() === 'production') {
+if (config.util.getEnv('NODE_ENV') === 'production') {
   app.use(churchill(logger));
 }
 
