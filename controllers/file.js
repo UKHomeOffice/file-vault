@@ -34,7 +34,7 @@ const s3 = new AWS.S3();
 
 function logError(req, err) {
   if (req.logger && req.logger.error) {
-    req.logger.error(err);
+    req.logger.error(err instanceof Error ? err.stack : err);
   }
 }
 
