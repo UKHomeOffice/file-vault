@@ -46,13 +46,16 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
+      config.log('passed file extension check');
       next();
     } else {
+      config.log('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
+    config.log('passed file extension check');
     next();
   }
 }
@@ -62,6 +65,8 @@ function deleteFileOnFinishedRequest(req, res, next) {
     onFinished(res, () => {
       fs.unlink(req.file.path);
     });
+    // eslint-disable-next-line no-console
+    console.log('deleted file on finish');
     next();
   } else {
     next({
@@ -71,6 +76,8 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
+  // eslint-disable-next-line no-console
+  console.log('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
@@ -91,11 +98,15 @@ function clamAV(req, res, next) {
       };
     }
 
+    // eslint-disable-next-line no-console
+    console.log('no virus found');
     next(err);
   });
 }
 
 function s3Upload(req, res, next) {
+  // eslint-disable-next-line no-console
+  console.log('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
@@ -117,6 +128,9 @@ function s3Upload(req, res, next) {
         Expires: config.get('aws.expiry')
       }));
     }
+
+    // eslint-disable-next-line no-console
+    console.log('uploaded file');
     next(err);
   });
 }
