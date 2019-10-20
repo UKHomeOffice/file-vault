@@ -46,16 +46,19 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
-      config.log('passed file extension check');
+      // eslint-disable-next-line no-console
+      console.log('passed file extension check');
       next();
     } else {
-      config.log('failed file extension check');
+      // eslint-disable-next-line no-console
+      console.log('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
-    config.log('passed file extension check');
+    // eslint-disable-next-line no-console
+    console.log('passed file extension check');
     next();
   }
 }
@@ -160,6 +163,9 @@ router.post('/', [
     const s3Item = s3Url.pathname;
     const Date = s3Url.searchParams.get('X-Amz-Date');
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
+
+    // eslint-disable-next-line no-console
+    console.log('returning file-vault url');
 
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
