@@ -10,6 +10,7 @@ const onFinished = require('on-finished');
 const config = require('config');
 const path = require('path');
 const {URL} = require('url');
+const debug = require('debug')('file-vault');
 
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
@@ -46,19 +47,18 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
-      // eslint-disable-next-line no-console
-      console.log('passed file extension check');
+
+      debug('passed file extension check');
       next();
     } else {
-      // eslint-disable-next-line no-console
-      console.log('failed file extension check');
+
+      debug('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
-    // eslint-disable-next-line no-console
-    console.log('passed file extension check');
+    debug('passed file extension check');
     next();
   }
 }
@@ -68,8 +68,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
     onFinished(res, () => {
       fs.unlink(req.file.path);
     });
-    // eslint-disable-next-line no-console
-    console.log('deleted file on finish');
+    debug('deleted file on finish');
     next();
   } else {
     next({
@@ -79,8 +78,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
-  // eslint-disable-next-line no-console
-  console.log('checking for virus');
+  debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
@@ -101,15 +99,13 @@ function clamAV(req, res, next) {
       };
     }
 
-    // eslint-disable-next-line no-console
-    console.log('no virus found');
+    debug('no virus found');
     next(err);
   });
 }
 
 function s3Upload(req, res, next) {
-  // eslint-disable-next-line no-console
-  console.log('uploding to s3');
+  debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
@@ -132,8 +128,7 @@ function s3Upload(req, res, next) {
       }));
     }
 
-    // eslint-disable-next-line no-console
-    console.log('uploaded file');
+    debug('uploaded file');
     next(err);
   });
 }
@@ -164,8 +159,7 @@ router.post('/', [
     const Date = s3Url.searchParams.get('X-Amz-Date');
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
 
-    // eslint-disable-next-line no-console
-    console.log('returning file-vault url');
+    debug('returning file-vault url');
 
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
