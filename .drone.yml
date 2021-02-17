@@ -1,41 +1,46 @@
-pipeline:
-  build_8:
-    image: node:8
-    commands:
-      - npm --loglevel warn install
-      - npm run test
-    when:
-      event: [push, pull_request]
+---
+kind: pipeline
+name: default
+type: kubernetes
 
-  build_app:
-    image: docker:18.03.1-ce
-    environment:
-      - DOCKER_HOST=tcp://172.17.0.1:2375
-    commands:
-      - docker build -t file-vault .
-    when:
-      event: pull_request
+steps:
+- name: build
+  pull: if-not-exists
+  image: node:8
+  commands:
+  - npm --loglevel warn install
+  - npm run test
+  when:
+    event: push
 
-  build_app:
-    image: docker:18.03.1-ce
-    environment:
-      - DOCKER_HOST=tcp://172.17.0.1:2375
-    commands:
-      - docker build -t file-vault-${DRONE_COMMIT_SHA} .
-    when:
-      branch: master
-      event: push
+- name: build_file-vault
+  pull: if-not-exists
+  image: docker:dind
+  commands:
+  - n=0; while [ "$n" -lt 60 ] && [ ! -e /var/run/docker.sock ]; do n=$(( n + 1 )); sleep 1; done
+  - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
+  volumes:
+    - name: dockersock
+      path: /var/run
+  when:
+    branch: [ master, features/* ]
+    event: push
 
-  image_to_quay:
-    image: docker:18.03.1-ce
-    secrets:
-      - DOCKER_PASSWORD
-    environment:
-      - DOCKER_HOST=tcp://172.17.0.1:2375
-    commands:
-      - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
-      - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-      - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-    when:
-      branch: master
-      event: push
+- name: image_to_quay
+  pull: if-not-exists
+  image: docker:dind
+  environment:
+    DOCKER_PASSWORD:
+      from_secret: DOCKER_PASSWORD
+  commands:
+  - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
+  - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+  - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+  volumes:
+    - name: dockersock
+      path: /var/run
+  when:
+    branch: master
+    event: push
+
+...
