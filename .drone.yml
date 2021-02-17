@@ -11,6 +11,7 @@ steps:
   - npm --loglevel warn install
   - npm run test
   when:
+    branch: [ master, features/* ]
     event: push
 
 - name: build_file-vault
