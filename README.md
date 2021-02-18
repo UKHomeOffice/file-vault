@@ -20,3 +20,4 @@ The following environment variables are used to configure file-vault.
   REQUEST_TIMEOUT           | Length of time (in seconds) for timeouts on http requests made by file-vault (when talking to clamAV and s3, defaults to 15s)
   FILE_EXTENSION_WHITELIST  | A comma separated list of file types that you want to white-list (defaults to everything). If the file is not in this list file-vault will respond with an error.
 ```
+
