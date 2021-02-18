@@ -16,9 +16,9 @@ steps:
 
 - name: build_file-vault
   pull: if-not-exists
-  image: docker:dind
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
   commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! -e /var/run/docker.sock ]; do n=$(( n + 1 )); sleep 1; done
+  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
   - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
   volumes:
     - name: dockersock
@@ -43,5 +43,9 @@ steps:
   when:
     branch: master
     event: push
+
+services:
+  - name: docker
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
 ...
