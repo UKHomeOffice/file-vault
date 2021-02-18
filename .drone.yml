@@ -16,9 +16,9 @@ steps:
 
 - name: build_file-vault
   pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+  image: docker:dind
   commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+  - n=0; while [ "$n" -lt 60 ] && [ ! -e /var/run/docker.sock ]; do n=$(( n + 1 )); sleep 1; done
   - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
   when:
     branch: [ master, features/* ]
@@ -26,12 +26,12 @@ steps:
 
 - name: image_to_quay
   pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+  image: docker:dind
   environment:
     DOCKER_PASSWORD:
       from_secret: DOCKER_PASSWORD
   commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+  - n=0; while [ "$n" -lt 60 ] && [ ! -e /var/run/docker.sock ]; do n=$(( n + 1 )); sleep 1; done
   - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
   - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
   - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
