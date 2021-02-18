@@ -16,7 +16,7 @@ steps:
 
 - name: build_file-vault
   pull: if-not-exists
-  image: docker:dind
+  image: docker
   commands:
   - n=0; while [ "$n" -lt 60 ] && [ ! -e /var/run/docker.sock ]; do n=$(( n + 1 )); sleep 1; done
   - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
@@ -26,7 +26,7 @@ steps:
 
 - name: image_to_quay
   pull: if-not-exists
-  image: docker:dind
+  image: docker
   environment:
     DOCKER_PASSWORD:
       from_secret: DOCKER_PASSWORD
