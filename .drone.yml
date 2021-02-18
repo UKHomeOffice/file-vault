@@ -20,9 +20,6 @@ steps:
   commands:
   - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
   - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
-  volumes:
-    - name: dockersock
-      path: /var/run
   when:
     branch: [ master, features/* ]
     event: push
@@ -38,9 +35,6 @@ steps:
   - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
   - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
   - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-  volumes:
-    - name: dockersock
-      path: /var/run
   when:
     branch: master
     event: push
