@@ -10,6 +10,7 @@ const onFinished = require('on-finished');
 const config = require('config');
 const path = require('path');
 const {URL} = require('url');
+const debug = require('debug')('file-vault');
 
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
@@ -34,7 +35,7 @@ const s3 = new AWS.S3();
 
 function logError(req, err) {
   if (req.logger && req.logger.error) {
-    req.logger.error(err);
+    req.logger.error(err instanceof Error ? err.stack : err);
   }
 }
 
@@ -46,13 +47,18 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
+
+      debug('passed file extension check');
       next();
     } else {
+
+      debug('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
+    debug('passed file extension check');
     next();
   }
 }
@@ -62,6 +68,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
     onFinished(res, () => {
       fs.unlink(req.file.path);
     });
+    debug('deleted file on finish');
     next();
   } else {
     next({
@@ -71,6 +78,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
+  debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
@@ -91,11 +99,13 @@ function clamAV(req, res, next) {
       };
     }
 
+    debug('no virus found');
     next(err);
   });
 }
 
 function s3Upload(req, res, next) {
+  debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
@@ -117,6 +127,8 @@ function s3Upload(req, res, next) {
         Expires: config.get('aws.expiry')
       }));
     }
+
+    debug('uploaded file');
     next(err);
   });
 }
@@ -146,6 +158,8 @@ router.post('/', [
     const s3Item = s3Url.pathname;
     const Date = s3Url.searchParams.get('X-Amz-Date');
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
+
+    debug('returning file-vault url');
 
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
