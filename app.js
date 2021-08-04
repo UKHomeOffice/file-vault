@@ -1,12 +1,24 @@
+/* eslint-disable no-process */
 'use strict';
 
 const express = require('express');
-const churchill = require('churchill');
-const logger = require('hof-logger')();
+const morgan = require('morgan');
+const _ = require('lodash');
 const app = express();
 const config = require('config');
+const logger = require('./logger');
 
-app.use(churchill(logger));
+morgan.token('id', req => _.get(req, 'session.id', 'filevault'));
+
+app.use(morgan('sessionId=:id ' + morgan.combined, {
+  stream: logger.stream,
+  skip: (req, res) => !process.env.DEBUG &&
+    (
+      res.statusCode >= 300 || !_.get(req, 'session.id') ||
+      ['/healthz'].some(v => req.originalUrl.includes(v))
+    )
+}));
+
 app.use('/file', require('./controllers/file'));
 
 /* eslint-disable no-unused-vars */
