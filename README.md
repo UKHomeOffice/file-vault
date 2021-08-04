@@ -2,6 +2,33 @@
 
 File-vault is a simple REST service that allows POSTing a file to an S3 bucket. Upon a successful virus check the service will return with a URL that can be used to retrieve the file. 
 
+## How this works
+Filevault simply adds or removes images/objects to an S3 bucket. It uses AWS Access Key IDs, Secret Access Keys and KMS Key IDs to do this which are supplied by ACP (or by the team in charge of creating them).
+
+However, Filevault also can whitelist file types, how long signed urls it receives from S3 last for, and what aws signature version to use.
+
+When a user POSTs to this service the image is uploaded to the S3 bucket, and a signed url is returned. This is then encrypted for security using a default encryption algorithm, randomly generated IV Vector and uses the AWS Password secret as the key to complete the encryption.
+This is then returned in a JSON response back to the server that called Filevault with an ID which represents the S3 Bucket Key ID (/file/:id) for the image specified, a date query parameter (/file/:id?date=<date>) that corresponds to when the upload occurred, and the ID query parameter (/file/:id?date=<date>&id=<encrypted_signed_S3_link) which represents the signed link sent back from S3 to access the image.
+To reiterate ID query parameter is actually the signed uri sent back from S3 which has been encrypted by crypto and the AWS Password as mentioned above.
+
+Decrypt_Deprecated - This uses crypto.createDecipher which is deprecated and will be lost from future versions of Node. However, to maintain backwards compatibility, the service looks out for a ':' separater in the ID query parameter to determine if there is an encoded IV Vector or not which the new method uses. If it isn't present, the old method of decryption is used.
+Example:
+```
+http://localhost:3000/file/ecf69543b7475297e885d6e94450fc75?date=20210804T152612Z&id=98cc7a349e0543b3e92758461a674a0919b423d17d27a42414ba5cf0c20b4c4e8a2dd838c6f536c84f929f3df02e93f7fe2f2316f3888c894f7d2eee6f924835
+```
+
+Decrypt - This uses crypto.createDecipheriv which requires the original password to be 16 bytes in length and this is done using the Buffer. Also for an IV Vector to be used which is randomly generated and passed on in the ID query parameter.
+Example:
+```
+http://localhost:3000/file/97ebbf4916250d24c7724044d1e1a54d?date=20210804T153817Z&id=75219fd49fe3d34a46b213f162bf05dc:c38868e0cad4596bb62c0feb04f86245ed188c944a2c231d718ecd83a8e988351900e01f2ecf958e8334e02a6e44cbb8ccebfbe1b1cb84d6d997017fc33e3d6d
+```
+N.B. if you are getting either 502 errors through Nginx and the Nginx logs are saying 'upstream prematurely closed connection while reading response header' OR you see this error below if running filevault locally, this is due to issues with decryption and the AWS Password or signature in the ID query parameter falling out of sync with the service. This is usually due to a code change or using a different file vault image in your drone file (i.e. switching the filevault image SHA). This is most likely to be discovered during Testing and should not be an issue in production unless the AWS Password or default algorithm has been changed suddenly. Beware: this could block caseworkers from accessing previously submitted material to S3.
+```
+{
+  "code": "ERR_UNESCAPED_CHARACTERS"
+}
+```
+
 ## Configuration
 
 The following environment variables are used to configure file-vault.
@@ -163,3 +190,5 @@ This will return a url something like
 ```
 
 Copy and paste the url into the browser.  You will need to log into office 365. Your file should be there
+
+

@@ -16,6 +16,10 @@ const debug = require('debug')('file-vault');
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
 const password = config.get('aws.password');
+const IV_LENGTH = 16;
+const ENCRYPTION_KEY = Buffer.concat([Buffer.from(password), Buffer.alloc(32)], 32);
+
+const logger = require('../logger');
 
 if (password === '') {
   throw new Error('please set the AWS_PASSWORD');
@@ -137,22 +141,27 @@ function s3Upload(req, res, next) {
     next(err);
   });
 }
-
+// Following this example
+// https://stackoverflow.com/questions/60369148/how-do-i-replace-deprecated-crypto-createcipher-in-node-js
 function encrypt(text) {
-  const cipher = crypto.createCipher(algorithm, password);
-  let crypted = cipher.update(text, 'utf8', 'hex');
-  crypted += cipher.final('hex');
-  if (process.env.DEBUG) {
-    console.log('>>>>>>>');
-    console.log(text);
-    console.log(cipher);
-    console.log(crypted);
-    console.log('>>>>>>>');
-  }
-  return crypted;
+    let iv = crypto.randomBytes(IV_LENGTH);
+    let cipher = crypto.createCipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+    let encrypted = cipher.update(text);
+    encrypted = Buffer.concat([encrypted, cipher.final()]);
+    return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
 function decrypt(text) {
+    let textParts = text.split(':');
+    let iv = Buffer.from(textParts.shift(), 'hex');
+    let encryptedText = Buffer.from(textParts.join(':'), 'hex');
+    let decipher = crypto.createDecipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+    let decrypted = decipher.update(encryptedText);
+    decrypted = Buffer.concat([decrypted, decipher.final()]);
+    return decrypted.toString();
+}
+
+function decrypt_deprecated(text) {
   const decipher = crypto.createDecipher(algorithm, password);
   let dec = decipher.update(text, 'hex', 'utf8');
   dec += decipher.final('utf8');
@@ -172,10 +181,8 @@ router.post('/', [
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
 
     if (process.env.DEBUG) {
-      console.log('>>>>>>>>>>>');
-      console.log(s3Url.searchParams.get('X-Amz-Signature'));
-      console.log(fileId);
-      console.log('>>>>>>>>>>>');
+      logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
+      logger.debug(fileId);
     }
 
     debug('returning file-vault url');
@@ -187,13 +194,16 @@ router.post('/', [
 ]);
 
 router.get('/:id', (req, res, next) => {
+  const reqId = req.query.id;
+  const decyptedId = reqId.indexOf(':') > -1 ? decrypt(reqId) : decrypt_deprecated(reqId);
+
   let params = `?X-Amz-Algorithm=${config.get('aws.amzAlgorithm')}`;
   params += `&X-Amz-Credential=${config.get('aws.accessKeyId')}`;
   params += `%2F${req.query.date.split('T')[0]}`;
   params += `%2F${config.get('aws.region')}%2Fs3%2Faws4_request`;
   params += `&X-Amz-Date=${req.query.date}`;
   params += `&X-Amz-Expires=${config.get('aws.expiry')}`;
-  params += `&X-Amz-Signature=${decrypt(req.query.id)}`;
+  params += `&X-Amz-Signature=${decyptedId}`;
   params += '&X-Amz-SignedHeaders=host';
 
   request.get({
