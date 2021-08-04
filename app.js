@@ -6,10 +6,7 @@ const logger = require('hof-logger')();
 const app = express();
 const config = require('config');
 
-if (config.util.getEnv('NODE_ENV') === 'production') {
-  app.use(churchill(logger));
-}
-
+app.use(churchill(logger));
 app.use('/file', require('./controllers/file'));
 
 /* eslint-disable no-unused-vars */
