@@ -138,6 +138,13 @@ function encrypt(text) {
   const cipher = crypto.createCipher(algorithm, password);
   let crypted = cipher.update(text, 'utf8', 'hex');
   crypted += cipher.final('hex');
+  if (process.env.DEBUG) {
+    console.log('>>>>>>>');
+    console.log(text);
+    console.log(cipher);
+    console.log(crypted);
+    console.log('>>>>>>>');
+  }
   return crypted;
 }
 

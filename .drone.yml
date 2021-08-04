@@ -6,7 +6,7 @@ type: kubernetes
 steps:
 - name: build
   pull: if-not-exists
-  image: node:8
+  image: node:14
   commands:
   - npm --loglevel warn install
   - npm run test
