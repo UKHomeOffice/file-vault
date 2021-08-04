@@ -67,7 +67,11 @@ function checkExtension(req, res, next) {
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
-      fs.unlink(req.file.path);
+      fs.unlink(req.file.path, err => {
+        if (err) {
+          console.log(err);
+        }
+      });
     });
     debug('deleted file on finish');
     next();
@@ -169,8 +173,6 @@ router.post('/', [
 
     if (process.env.DEBUG) {
       console.log('>>>>>>>>>>>');
-      console.log(req.s3Url);
-      console.log(s3Url);
       console.log(s3Url.searchParams.get('X-Amz-Signature'));
       console.log(fileId);
       console.log('>>>>>>>>>>>');
