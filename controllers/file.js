@@ -159,6 +159,15 @@ router.post('/', [
     const Date = s3Url.searchParams.get('X-Amz-Date');
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
 
+    if (process.env.DEBUG) {
+      console.log('>>>>>>>>>>>');
+      console.log(req.s3Url);
+      console.log(s3Url):
+      console.log(s3Url.searchParams.get('X-Amz-Signature'));
+      console.log(fileId);
+      console.log('>>>>>>>>>>>');
+    }
+
     debug('returning file-vault url');
 
     res.status(200).json({
