@@ -162,7 +162,7 @@ router.post('/', [
     if (process.env.DEBUG) {
       console.log('>>>>>>>>>>>');
       console.log(req.s3Url);
-      console.log(s3Url):
+      console.log(s3Url);
       console.log(s3Url.searchParams.get('X-Amz-Signature'));
       console.log(fileId);
       console.log('>>>>>>>>>>>');
