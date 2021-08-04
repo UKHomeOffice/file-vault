@@ -1,16 +1,23 @@
-FROM node:14-alpine
+FROM node:14-alpine@sha256:5c33bc6f021453ae2e393e6e20650a4df0a4737b1882d389f17069dc1933fdc5
 
-RUN apk upgrade --no-cache
-RUN addgroup -S app
-RUN adduser -S app -G app -u 999 -h /app/
-RUN chown -R app:app /app/
+USER root
+
+# Update packages as a result of Anchore security vulnerability checks
+RUN apk update && \
+    apk add --upgrade gnutls binutils nodejs nodejs-npm apk-tools libjpeg-turbo libcurl libx11 libxml2
+
+# Setup nodejs group & nodejs user
+RUN addgroup --system nodejs --gid 998 && \
+    adduser --system nodejs --uid 999 --home /app/ && \
+    chown -R 999:998 /app/
 
 USER 999
+
 WORKDIR /app
 
-COPY package.json /app/package.json
-COPY package-lock.json /app/package-lock.json
-RUN npm ci --production --no-optional --ignore-scripts
-COPY . /app
+COPY --chown=999:998 . /app
+
+RUN yarn install --frozen-lockfile --production --ignore-optional
 
 CMD node index.js
+
