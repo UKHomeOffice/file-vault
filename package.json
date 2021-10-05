@@ -5,10 +5,13 @@
     "type": "git",
     "url": "https://github.com/UKHomeOffice/file-vault"
   },
+  "engines": {
+    "node": ">=14.15.0"
+  },
   "description": "Allows POST and GET to a configured s3 bucket.",
   "main": "index.js",
   "scripts": {
-    "test": "npm run test:lint && npm run test:unit",
+    "test": "yarn run test:lint && yarn run test:unit",
     "test:lint": "eslint .",
     "test:unit": "NODE_ENV=test mocha test/",
     "start": "node index"
@@ -17,11 +20,12 @@
   "license": "MIT",
   "dependencies": {
     "aws-sdk": "2.167.0",
-    "churchill": "1.2.0",
     "config": "^1.24.0",
     "debug": "^4.1.1",
-    "express": "^4.14.0",
-    "hof-logger": "^1.0.2",
+    "express": "^4.17.1",
+    "hof": "^19.5.3",
+    "lodash": "^4.17.21",
+    "morgan": "^1.10.0",
     "multer": "^1.2.1",
     "on-finished": "^2.3.0",
     "request": "^2.79.0"
@@ -30,7 +34,7 @@
     "eslint": "^3.13.1",
     "eslint-config-homeoffice": "^2.0.0",
     "mocha": "^3.2.0",
-    "nock": "^9.0.2",
+    "nock": "^9.1.0",
     "supertest": "^2.0.1"
   }
 }
