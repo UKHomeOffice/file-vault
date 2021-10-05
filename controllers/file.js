@@ -43,7 +43,7 @@ function checkExtension(req, res, next) {
   const fileTypes = config.get('fileTypes');
 
   if (fileTypes) {
-    const uploadedFileExtension = path.extname(req.file.originalname).replace('.', '');
+    const uploadedFileExtension = path.extname(req.file.originalname).replace('.', '').toLowerCase();
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
