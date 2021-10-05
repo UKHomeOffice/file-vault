@@ -11,7 +11,7 @@ steps:
   - npm --loglevel warn install
   - npm run test
   when:
-    branch: [ master, features/* ]
+    branch: [ master, feature/* ]
     event: push
 
 - name: build_file-vault
@@ -21,7 +21,7 @@ steps:
   - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
   - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
   when:
-    branch: [ master, features/* ]
+    branch: [ master, feature/* ]
     event: push
 
 - name: image_to_quay
