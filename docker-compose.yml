@@ -13,7 +13,6 @@ services:
       - AWS_BUCKET=aws-bucket
       - AWS_EXPIRY_TIME=600
       - NODE_ENV=development
-      - AWS_PASSWORD=password
     ports:
       - "3000:3000"
 
@@ -25,7 +24,6 @@ services:
       - NAXSI_USE_DEFAULT_RULES=FALSE
       - ADD_NGINX_SERVER_CFG=add_header Cache-Control private;add_header X-Frame-Options "SAMEORIGIN" always;add_header X-Content-Type-Options "nosniff" always;add_header X-XSS-Protection "1; mode=block" always;
       - ERROR_REDIRECT_CODES=599
-      - EXTRA_NAXSI_RULES=BasicRule wl:2,1000,1001,1002,1007,1008,1009,1010,1011,1013,1015,1101,1205,1314 "mz:BODY";BasicRule wl:0 "mz:$HEADERS_VAR:Cookie";BasicRule wl:1500 "mz:FILE_EXT";
     ports:
       - "443:443"
       - "80:80"
