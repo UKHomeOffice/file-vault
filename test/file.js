@@ -97,6 +97,44 @@ describe('/file', () => {
             .end(done);
         });
 
+        it('returns when uppercase file extension is used', (done) => {
+          process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
+          // create a mock clamav rest server
+          nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
+          // create a mock aws response
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+          supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/upper_case_document.PDF')
+            .expect(200)
+            .end((err, res) => {
+              if (err) {
+                throw err;
+              }
+              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
+              done();
+            });
+        });
+
+        it('returns when mixedcase file extension is used', (done) => {
+          process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
+          // create a mock clamav rest server
+          nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
+          // create a mock aws response
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+          supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/mixed_case_document.pDf')
+            .expect(200)
+            .end((err, res) => {
+              if (err) {
+                throw err;
+              }
+              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
+              done();
+            });
+        });
+
         it('returns a short url when it successfully puts', (done) => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
