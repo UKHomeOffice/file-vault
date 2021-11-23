@@ -95,7 +95,8 @@ function clamAV(req, res, next) {
   request.post({
     url: config.get('clamRest.url'),
     formData: fileData,
-    //timeout: config.get('timeout') * 1000
+    timeout: config.get('timeout') * 1000
+    //timeout: parseInt(config.get('timeout') || 60000),
   }, (err, httpResponse, body) => {
     if (err) {
       logError(req, err);
