@@ -172,7 +172,7 @@ router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  clamAV,
+  //clamAV,
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
