@@ -14,7 +14,6 @@
     "password": "AWS_PASSWORD"
   },
   "fileDestination": "STORAGE_FILE_DESTINATION",
-  "timeout": 600, //"REQUEST_TIMEOUT",
-  //"timeout": parseInt(process.env.CLAMD_TIMEOUT || 60000),
+  "timeout": "REQUEST_TIMEOUT",
   "fileTypes": "FILE_EXTENSION_WHITELIST"
 }
