@@ -16,6 +16,6 @@
     "password": ""
   },
   "fileDestination": "uploads",
-  "timeout": 15,
+  "timeout": 60,
   "fileTypes": ""
 }
