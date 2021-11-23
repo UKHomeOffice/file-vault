@@ -95,7 +95,7 @@ function clamAV(req, res, next) {
   request.post({
     url: config.get('clamRest.url'),
     formData: fileData,
-    timeout: config.get('timeout') * 1000
+    //timeout: config.get('timeout') * 1000
   }, (err, httpResponse, body) => {
     if (err) {
       logError(req, err);
@@ -172,7 +172,7 @@ router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  //clamAV,
+  clamAV,
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
