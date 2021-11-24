@@ -138,7 +138,7 @@ function s3Upload(req, res, next) {
       err = {
         code: 'S3PUTFailed'
       };
-      console.log('>>>>>>> S3 Put Failed >>>>>>>>>', err);
+      //console.log('>>>>>>> S3 Put Failed >>>>>>>>>', err);
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
@@ -146,7 +146,7 @@ function s3Upload(req, res, next) {
       //console.log('>>>>>>> Signed URL Generated >>>>>>>>>', err);
     }
     debug('uploaded file');
-    //console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
+    console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
     next(err);
   });
 }
