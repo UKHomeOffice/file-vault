@@ -45,6 +45,7 @@ function logError(req, err) {
 }
 
 function checkExtension(req, res, next) {
+  console.log('>>>>>>> Checking Extension >>>>>>>>>');
   const fileTypes = config.get('fileTypes');
 
   if (fileTypes) {
@@ -52,17 +53,18 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
-
+      console.log('>>>>>>> Passed File Extension Check 1 >>>>>>>>>');
       debug('passed file extension check');
       next();
     } else {
-
+      console.log('>>>>>>> Failed File Extension Check >>>>>>>>>');
       debug('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
+    console.log('>>>>>>> Passed File Extension Check 2 >>>>>>>>>');
     debug('passed file extension check');
     next();
   }
@@ -77,6 +79,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
         }
       });
     });
+    console.log('>>>>>>> Deleted File On Finish >>>>>>>>>');
     debug('deleted file on finish');
     next();
   } else {
@@ -88,6 +91,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 
 function clamAV(req, res, next) {
   debug('checking for virus');
+  console.log('>>>>>>> Clam AV Check >>>>>>>>>');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
@@ -99,6 +103,7 @@ function clamAV(req, res, next) {
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     if (err) {
+      console.log('>>>>>>> Clam AV Error Found >>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'VirusScanFailed'
@@ -108,13 +113,14 @@ function clamAV(req, res, next) {
         code: 'VirusFound'
       };
     }
-
+    console.log('>>>>>>> Clam AV Finished >>>>>>>>>');
     debug('no virus found');
     next(err);
   });
 }
 
 function s3Upload(req, res, next) {
+  console.log('>>>>>>> Uploading to S3 >>>>>>>>>', err);
   debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
@@ -128,16 +134,18 @@ function s3Upload(req, res, next) {
     ContentType: req.file.mimetype
   }), (err) => {
     if (err) {
+      console.log('>>>>>>> S3 Put Failed >>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'S3PUTFailed'
       };
     } else {
+      console.log('>>>>>>> Signed URL Generated >>>>>>>>>', err);
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
       }));
     }
-
+    console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
     debug('uploaded file');
     next(err);
   });
