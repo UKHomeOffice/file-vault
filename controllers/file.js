@@ -64,8 +64,8 @@ function checkExtension(req, res, next) {
       });
     }
   } else {
-    console.log('>>>>>>> Passed File Extension Check 2 >>>>>>>>>');
     debug('passed file extension check');
+    console.log('>>>>>>> Passed File Extension Check 2 >>>>>>>>>');
     next();
   }
 }
@@ -103,18 +103,19 @@ function clamAV(req, res, next) {
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     if (err) {
-      console.log('>>>>>>> Clam AV Error Found >>>>>>>>>', err);
+      console.log('>>>>>>> Clam AV Scan Failed >>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'VirusScanFailed'
       };
     } else if (body.indexOf('false') !== -1) {
+
       err = {
         code: 'VirusFound'
       };
     }
-    console.log('>>>>>>> Clam AV Finished >>>>>>>>>');
     debug('no virus found');
+    console.log('>>>>>>> Clam AV Finished >>>>>>>>>');
     next(err);
   });
 }
@@ -145,8 +146,8 @@ function s3Upload(req, res, next) {
         Expires: config.get('aws.expiry')
       }));
     }
-    console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
     debug('uploaded file');
+    console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
     next(err);
   });
 }
