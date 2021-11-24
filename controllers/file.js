@@ -109,7 +109,6 @@ function clamAV(req, res, next) {
         code: 'VirusScanFailed'
       };
     } else if (body.indexOf('false') !== -1) {
-
       err = {
         code: 'VirusFound'
       };
@@ -121,8 +120,8 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
-  console.log('>>>>>>> Uploading to S3 >>>>>>>>>', err);
   debug('uploding to s3');
+  console.log('>>>>>>> Uploading to S3 >>>>>>>>>', err);
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
@@ -141,10 +140,10 @@ function s3Upload(req, res, next) {
         code: 'S3PUTFailed'
       };
     } else {
-      console.log('>>>>>>> Signed URL Generated >>>>>>>>>', err);
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
       }));
+      console.log('>>>>>>> Signed URL Generated >>>>>>>>>', err);
     }
     debug('uploaded file');
     console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
