@@ -17,5 +17,6 @@
   },
   "fileDestination": "uploads",
   "timeout": 60,
-  "fileTypes": ""
+  "fileTypes": "",
+  "fileSize": 104857600
 }
