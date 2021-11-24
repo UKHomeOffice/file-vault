@@ -121,7 +121,7 @@ function clamAV(req, res, next) {
 
 function s3Upload(req, res, next) {
   debug('uploding to s3');
-  console.log('>>>>>>> Uploading to S3 >>>>>>>>>', err);
+  console.log('>>>>>>> Uploading to S3 >>>>>>>>>');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
@@ -138,15 +138,15 @@ function s3Upload(req, res, next) {
       err = {
         code: 'S3PUTFailed'
       };
-      //console.log('>>>>>>> S3 Put Failed >>>>>>>>>', err);
+      console.log('>>>>>>> S3 Put Failed >>>>>>>>>', err);
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
       }));
-      //console.log('>>>>>>> Signed URL Generated >>>>>>>>>', err);
+      console.log('>>>>>>> Signed URL Generated >>>>>>>>>');
     }
     debug('uploaded file');
-    //console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
+    console.log('>>>>>>> Uploaded File Complete >>>>>>>>>');
     next(err);
   });
 }
