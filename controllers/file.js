@@ -39,7 +39,9 @@ AWS.config.update({
 const s3 = new AWS.S3();
 
 function logError(req, err) {
-  req.logger.error(err instanceof Error ? err.stack : err);
+  if (req.logger && req.logger.error) {
+    req.logger.error(err instanceof Error ? err.stack : err);
+  }
 }
 
 function checkExtension(req, res, next) {
@@ -133,7 +135,7 @@ function s3Upload(req, res, next) {
   }), (err) => {
     if (err) {
       logError(req, err);
-      console.log('>>>>>>> Uploaded File Complete >>>>>>>>>');
+      console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
       err = {
         code: 'S3PUTFailed'
       };
