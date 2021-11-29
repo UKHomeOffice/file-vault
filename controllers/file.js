@@ -126,7 +126,7 @@ function s3Upload(req, res, next) {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
   };
-
+  console.log(req.file.path);
   s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
