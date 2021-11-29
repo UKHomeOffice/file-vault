@@ -103,12 +103,13 @@ function clamAV(req, res, next) {
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     if (err) {
-      console.log('>>>>>>> Clam AV Scan Failed >>>>>>>>>', err);
+      console.log('>>>>>>> Clam AV Scan Failed 1 >>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'VirusScanFailed'
       };
     } else if (body.indexOf('false') !== -1) {
+      console.log('>>>>>>> Clam AV Scan Failed 2 >>>>>>>>>', err);
       err = {
         code: 'VirusFound'
       };
