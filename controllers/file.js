@@ -114,12 +114,11 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
-  debug('uploding to s3');
+  debug('uploading to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
   };
-
   s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
@@ -127,6 +126,7 @@ function s3Upload(req, res, next) {
     ContentType: req.file.mimetype
   }), (err) => {
     if (err) {
+      console.log(err);
       logError(req, err);
       err = {
         code: 'S3PUTFailed'
@@ -172,7 +172,7 @@ router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  clamAV,
+  // clamAV,
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
