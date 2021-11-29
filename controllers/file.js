@@ -39,9 +39,7 @@ AWS.config.update({
 const s3 = new AWS.S3();
 
 function logError(req, err) {
-  if (req.logger && req.logger.error) {
-    req.logger.error(err instanceof Error ? err.stack : err);
-  }
+  req.logger.error(err instanceof Error ? err.stack : err);
 }
 
 function checkExtension(req, res, next) {
@@ -135,6 +133,7 @@ function s3Upload(req, res, next) {
   }), (err) => {
     if (err) {
       logError(req, err);
+      console.log('>>>>>>> Uploaded File Complete >>>>>>>>>');
       err = {
         code: 'S3PUTFailed'
       };
@@ -190,11 +189,14 @@ router.post('/', [
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
 
     if (process.env.DEBUG) {
+      console.log('>>>>>>> S3 Search Parms >>>>>>>>>', s3Url.searchParams.get('X-Amz-Signature'));
       logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
+      console.log('>>>>>>> S3 File ID >>>>>>>>>', fileId);
       logger.debug(fileId);
     }
 
     debug('returning file-vault url');
+    console.log('>>>>>>> Returning file-vault URL >>>>>>>>>');
 
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
@@ -222,6 +224,7 @@ router.get('/:id', (req, res, next) => {
   }, (err, resp, buffer) => {
     if (err) {
       logError(req, err);
+      console.log('>>>>>>> Logging Request Error >>>>>>>>>', err);
       return next(err);
     }
     res.writeHead(resp.statusCode, resp.headers);
