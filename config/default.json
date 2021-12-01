@@ -16,7 +16,7 @@
     "password": ""
   },
   "fileDestination": "uploads",
-  "timeout": 60,
+  "timeout": 200,
   "fileTypes": "",
-  "fileSize": 104857600
+  "fileSize": 5000857600
 }
