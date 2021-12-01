@@ -71,6 +71,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
     onFinished(res, () => {
       fs.unlink(req.file.path, err => {
         if (err) {
+          logError(req, err);
         }
       });
     });
