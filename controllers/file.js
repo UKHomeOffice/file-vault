@@ -45,7 +45,6 @@ function logError(req, err) {
 }
 
 function checkExtension(req, res, next) {
-  console.log('>>>>>>> Checking Extension >>>>>>>>>');
   const fileTypes = config.get('fileTypes');
 
   if (fileTypes) {
@@ -53,11 +52,9 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
-      console.log('>>>>>>> Passed File Extension Check 1 >>>>>>>>>');
       debug('passed file extension check');
       next();
     } else {
-      console.log('>>>>>>> Failed File Extension Check >>>>>>>>>');
       debug('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
@@ -65,7 +62,6 @@ function checkExtension(req, res, next) {
     }
   } else {
     debug('passed file extension check');
-    console.log('>>>>>>> Passed File Extension Check 2 >>>>>>>>>');
     next();
   }
 }
@@ -75,11 +71,9 @@ function deleteFileOnFinishedRequest(req, res, next) {
     onFinished(res, () => {
       fs.unlink(req.file.path, err => {
         if (err) {
-          console.log(err);
         }
       });
     });
-    console.log('>>>>>>> Deleted File On Finish >>>>>>>>>');
     debug('deleted file on finish');
     next();
   } else {
@@ -91,7 +85,6 @@ function deleteFileOnFinishedRequest(req, res, next) {
 
 function clamAV(req, res, next) {
   debug('checking for virus');
-  console.log('>>>>>>> Clam AV Check >>>>>>>>>');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
@@ -103,31 +96,26 @@ function clamAV(req, res, next) {
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     if (err) {
-      console.log('>>>>>>> Clam AV Scan Failed 1 >>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'VirusScanFailed'
       };
     } else if (body.indexOf('false') !== -1) {
-      console.log('>>>>>>> Clam AV Scan Failed 2 >>>>>>>>>', err);
       err = {
         code: 'VirusFound'
       };
     }
     debug('no virus found');
-    console.log('>>>>>>> Clam AV Finished >>>>>>>>>');
     next(err);
   });
 }
 
 function s3Upload(req, res, next) {
   debug('uploding to s3');
-  console.log('>>>>>>> Uploading to S3 >>>>>>>>>');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
   };
-  console.log(req.file.path);
   s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
@@ -136,19 +124,15 @@ function s3Upload(req, res, next) {
   }), (err) => {
     if (err) {
       logError(req, err);
-      console.log('>>>>>>> Uploaded File Complete >>>>>>>>>', err);
       err = {
         code: 'S3PUTFailed'
       };
-      console.log('>>>>>>> S3 Put Failed >>>>>>>>>', err);
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
       }));
-      console.log('>>>>>>> Signed URL Generated >>>>>>>>>');
     }
     debug('uploaded file');
-    console.log('>>>>>>> Uploaded File Complete >>>>>>>>>');
     next(err);
   });
 }
@@ -192,14 +176,11 @@ router.post('/', [
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
 
     if (process.env.DEBUG) {
-      console.log('>>>>>>> S3 Search Parms >>>>>>>>>', s3Url.searchParams.get('X-Amz-Signature'));
       logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
-      console.log('>>>>>>> S3 File ID >>>>>>>>>', fileId);
       logger.debug(fileId);
     }
 
     debug('returning file-vault url');
-    console.log('>>>>>>> Returning file-vault URL >>>>>>>>>');
 
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
@@ -227,7 +208,6 @@ router.get('/:id', (req, res, next) => {
   }, (err, resp, buffer) => {
     if (err) {
       logError(req, err);
-      console.log('>>>>>>> Logging Request Error >>>>>>>>>', err);
       return next(err);
     }
     res.writeHead(resp.statusCode, resp.headers);
