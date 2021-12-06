@@ -56,9 +56,12 @@ function checkExtension(req, res, next) {
       next();
     } else {
       debug('failed file extension check');
+      throw new Error('FileExtensionNotAllowed');
+      /*
       next({
         code: 'FileExtensionNotAllowed'
       });
+      throw new Error('FileExtensionNotAllowed'); */
     }
   } else {
     debug('passed file extension check');
