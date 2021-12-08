@@ -15,5 +15,6 @@
   },
   "fileDestination": "STORAGE_FILE_DESTINATION",
   "timeout": "REQUEST_TIMEOUT",
-  "fileTypes": "FILE_EXTENSION_WHITELIST"
+  "fileTypes": "FILE_EXTENSION_WHITELIST",
+  "fileSize": "MAX_FILE_SIZE"
 }
