@@ -173,9 +173,9 @@ function decrypt_deprecated(text) {
 router.post('/', [
   upload.single('document'),
   checkExtension,
-  deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
+  deleteFileOnFinishedRequest,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
