@@ -86,13 +86,13 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
-function clamAV(req, res, next) {
+async function clamAV(req, res, next) {
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
-  request.post({
+  await request.post({
     url: config.get('clamRest.url'),
     formData: fileData,
     timeout: parseInt(config.get('timeout')) * 1000,
@@ -170,19 +170,11 @@ function decrypt_deprecated(text) {
   return dec;
 }
 
-async function completePrepSteps() {
-  const extensionResult = checkExtension();
-  console.log('>>>>>>>>>> extension Result >>>>>>>>>>', extensionResult);
-  const deleteFileResult = deleteFileOnFinishedRequest();
-  console.log('>>>>>>>>>> delete File Result >>>>>>>>>>', deleteFileResult);
-  const checkClamAVResult = await clamAV();
-  console.log('>>>>>>>>>> check ClamAV Result >>>>>>>>>>', checkClamAVResult);
-}
-
-
 router.post('/', [
   upload.single('document'),
-  completePrepSteps,
+  checkExtension,
+  deleteFileOnFinishedRequest,
+  clamAV,
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
