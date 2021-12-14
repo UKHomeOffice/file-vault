@@ -138,6 +138,7 @@ function s3Upload(req, res, next) {
       }));
     }
 
+    console.log('>>>>>>>>>> UPLOADING TO S3 >>>>>>>>>>');
     debug('uploaded file');
     next(err);
   });
