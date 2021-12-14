@@ -108,7 +108,7 @@ function clamAV(req, res, next) {
         code: 'VirusFound'
       };
     }
-
+    console.log('>>>>>>>>>> CLAM AV FINISHED >>>>>>>>>>');
     debug('no virus found');
     next(err);
   });
@@ -191,6 +191,7 @@ router.post('/', [
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
     });
+    console.log('>>>>>>>>>> returning file-vault url >>>>>>>>>>');
   }
 ]);
 
