@@ -170,11 +170,19 @@ function decrypt_deprecated(text) {
   return dec;
 }
 
+async function completePrepSteps() {
+  const extensionResult = checkExtension();
+  console.log('>>>>>>>>>> extension Result >>>>>>>>>>', extensionResult);
+  const deleteFileResult = deleteFileOnFinishedRequest();
+  console.log('>>>>>>>>>> delete File Result >>>>>>>>>>', deleteFileResult);
+  const checkClamAVResult = await clamAV();
+  console.log('>>>>>>>>>> check ClamAV Result >>>>>>>>>>', checkClamAVResult);
+}
+
+
 router.post('/', [
   upload.single('document'),
-  checkExtension,
-  deleteFileOnFinishedRequest,
-  clamAV,
+  completePrepSteps,
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
