@@ -112,17 +112,16 @@ async function clamAV(req, res, next) {
     debug('no virus found');
     next(err);
   });
-  s3Upload(req, res, next);
 }
 
-function s3Upload(req, res, next) {
+async function s3Upload(req, res, next) {
   debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
   };
 
-  s3.putObject(Object.assign({}, params, {
+  await s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
     SSEKMSKeyId: config.get('aws.kmsKeyId'),
@@ -176,7 +175,7 @@ router.post('/', [
   checkExtension,
   deleteFileOnFinishedRequest,
   clamAV,
-  //s3Upload,
+  s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
