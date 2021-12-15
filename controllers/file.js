@@ -68,6 +68,7 @@ function checkExtension(req, res, next) {
   }
 }
 
+/*
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
@@ -86,7 +87,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
       code: 'FileNotFound'
     });
   }
-}
+} */
 
 async function clamAV(req, res, next) {
   debug('checking for virus');
@@ -130,8 +131,8 @@ async function s3Upload(req, res, next) {
     SSEKMSKeyId: config.get('aws.kmsKeyId'),
     ContentType: req.file.mimetype
   }), (err) => {
-    console.log('>>>>>>>>>> Error in s3 >>>>>>>>>>', err);
     if (err) {
+      console.log('>>>>>>>>>> Error in s3 >>>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'S3PUTFailed'
@@ -177,7 +178,7 @@ function decrypt_deprecated(text) {
 router.post('/', [
   upload.single('document'),
   checkExtension,
-  deleteFileOnFinishedRequest,
+  //deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
   (req, res) => {
@@ -190,6 +191,13 @@ router.post('/', [
       logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
       logger.debug(fileId);
     }
+
+    /* Deleting File */
+    fs.unlink(req.file.path, err => {
+        if (err) {
+          console.log(err);
+        }
+    });
 
     debug('returning file-vault url');
 
