@@ -68,7 +68,6 @@ function checkExtension(req, res, next) {
   }
 }
 
-
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
