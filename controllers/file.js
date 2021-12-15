@@ -102,6 +102,7 @@ async function clamAV(req, res, next) {
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     if (err) {
+      console.log('>>>>>>>>>> Clam AV Failed >>>>>>>>>>');
       logError(req, err);
       err = {
         code: 'VirusScanFailed'
@@ -193,6 +194,7 @@ router.post('/', [
     }
 
     /* Deleting File */
+    console.log('>>>>>>>>>> deleting file >>>>>>>>>>');
     fs.unlink(req.file.path, err => {
         if (err) {
           console.log(err);
@@ -200,11 +202,11 @@ router.post('/', [
     });
 
     debug('returning file-vault url');
+    console.log('>>>>>>>>>> returning file-vault url >>>>>>>>>>');
 
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
     });
-    console.log('>>>>>>>>>> returning file-vault url >>>>>>>>>>');
   }
 ]);
 
