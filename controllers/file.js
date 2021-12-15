@@ -141,6 +141,18 @@ async function s3Upload(req, res, next) {
 
     console.log('>>>>>>>>>> UPLOADING TO S3 >>>>>>>>>>');
     debug('uploaded file');
+
+    /* Deleting File */
+    if (req.file) {
+      console.log('>>>>>>>>>> Deleting the file in s3 >>>>>>>>>>');
+      fs.unlink(req.file.path, err => {
+        if (err) {
+          console.log(err);
+        }
+      });
+      debug('deleted file on finish');
+      next();
+    }
     next(err);
   });
 }
@@ -174,7 +186,7 @@ function decrypt_deprecated(text) {
 router.post('/', [
   upload.single('document'),
   checkExtension,
-  deleteFileOnFinishedRequest,
+  //deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
   (req, res) => {
