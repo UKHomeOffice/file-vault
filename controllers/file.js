@@ -68,16 +68,16 @@ function checkExtension(req, res, next) {
   }
 }
 
-/*
+
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
       console.log('>>>>>>>>>> On Finished >>>>>>>>>>');
-      fs.unlink(req.file.path, err => {
-        if (err) {
-          console.log(err);
-        }
-      });
+      //fs.unlink(req.file.path, err => {
+      //  if (err) {
+      //    console.log(err);
+      //  }
+      //});
     });
     console.log('>>>>>>>>>> Deleted File on Finish >>>>>>>>>>');
     debug('deleted file on finish');
@@ -87,7 +87,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
       code: 'FileNotFound'
     });
   }
-} */
+}
 
 async function clamAV(req, res, next) {
   debug('checking for virus');
@@ -178,7 +178,7 @@ function decrypt_deprecated(text) {
 router.post('/', [
   upload.single('document'),
   checkExtension,
-  //deleteFileOnFinishedRequest,
+  deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
   (req, res) => {
