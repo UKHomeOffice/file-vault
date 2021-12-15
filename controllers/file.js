@@ -123,12 +123,14 @@ async function s3Upload(req, res, next) {
     Key: req.file.filename
   };
 
+  console.log('>>>>>>>>>> S3 READ STREAM >>>>>>>>>>');
   await s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
     SSEKMSKeyId: config.get('aws.kmsKeyId'),
     ContentType: req.file.mimetype
   }), (err) => {
+    console.log('>>>>>>>>>> Error in s3 >>>>>>>>>>', err);
     if (err) {
       logError(req, err);
       err = {
@@ -140,7 +142,7 @@ async function s3Upload(req, res, next) {
       }));
     }
 
-    console.log('>>>>>>>>>> UPLOADING TO S3 >>>>>>>>>>');
+    console.log('>>>>>>>>>> UPLOADED TO S3 >>>>>>>>>>');
     debug('uploaded file');
     next(err);
   });
@@ -175,10 +177,9 @@ function decrypt_deprecated(text) {
 router.post('/', [
   upload.single('document'),
   checkExtension,
-  //deleteFileOnFinishedRequest,
+  deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
-  deleteFileOnFinishedRequest,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
