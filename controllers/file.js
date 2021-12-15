@@ -112,6 +112,7 @@ async function clamAV(req, res, next) {
     debug('no virus found');
     next(err);
   });
+  s3Upload();
 }
 
 function s3Upload(req, res, next) {
@@ -173,9 +174,9 @@ function decrypt_deprecated(text) {
 router.post('/', [
   upload.single('document'),
   checkExtension,
-  clamAV,
-  s3Upload,
   deleteFileOnFinishedRequest,
+  clamAV,
+  //s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
