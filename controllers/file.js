@@ -78,6 +78,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
         }
       });
     });
+    console.log('>>>>>>>>>> Deleted File on Finish >>>>>>>>>>');
     debug('deleted file on finish');
     next();
   } else {
@@ -140,16 +141,6 @@ async function s3Upload(req, res, next) {
     }
 
     console.log('>>>>>>>>>> UPLOADING TO S3 >>>>>>>>>>');
-
-    /* Deleting File */
-    console.log('>>>>>>>>>> Deleting the file in s3 >>>>>>>>>>');
-    if (req.file) {
-      fs.unlink(req.file.path, err => {
-        if (err) {
-          console.log(err);
-        }
-      });
-    }
     debug('uploaded file');
     next(err);
   });
@@ -187,6 +178,7 @@ router.post('/', [
   //deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
+  deleteFileOnFinishedRequest,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
