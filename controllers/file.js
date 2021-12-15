@@ -112,7 +112,7 @@ async function clamAV(req, res, next) {
     debug('no virus found');
     next(err);
   });
-  s3Upload();
+  s3Upload(req, res, next);
 }
 
 function s3Upload(req, res, next) {
