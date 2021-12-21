@@ -71,7 +71,7 @@ function checkExtension(req, res, next) {
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
-      console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', JSON.stringify(res));
+      console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
       fs.unlink(req.file.path, err => {
         if (err) {
           console.log(err);
