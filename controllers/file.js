@@ -99,9 +99,9 @@ function clamAV(req, res, next) {
     timeout: parseInt(config.get('timeout')) * 1000,
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
-    console.log('>>>>>>>>>>> http Response >>>>>>>>>>>>>>>', httpResponse);
-    console.log('>>>>>>>>>>> body >>>>>>>>>>>>>>>', body);
-    console.log('>>>>>>>>>>> error >>>>>>>>>>>>>>>', err);
+    console.log('>>>>>>>>>>> http Response >>>>>>>>>>>>>>>', JSON.stringify(httpResponse));
+    console.log('>>>>>>>>>>> body >>>>>>>>>>>>>>>', JSON.stringify(body));
+    console.log('>>>>>>>>>>> error >>>>>>>>>>>>>>>', JSON.stringify(err));
     if (err) {
       logError(req, err);
       err = {
