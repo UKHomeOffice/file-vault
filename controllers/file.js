@@ -87,6 +87,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
+  console.log('>>>>>>>>>>> checking clamav >>>>>>>>>>>>>>>');
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
