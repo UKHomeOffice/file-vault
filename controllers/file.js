@@ -108,14 +108,16 @@ function clamAV(req, res, next) {
       err = {
         code: 'VirusScanFailed'
       };
+      next(err);
     } else if (body.indexOf('false') !== -1) {
       err = {
         code: 'VirusFound'
       };
+      next(err);
+    } else {
+      debug('no virus found');
+      s3Upload(req, res, next);
     }
-
-    debug('no virus found');
-    next(err);
   });
 }
 
@@ -179,7 +181,7 @@ router.post('/', [
   checkExtension,
   deleteFileOnFinishedRequest,
   clamAV,
-  s3Upload,
+  //s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
