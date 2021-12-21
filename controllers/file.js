@@ -52,11 +52,9 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
-
       debug('passed file extension check');
       next();
     } else {
-
       debug('failed file extension check');
       next({
         code: 'FileExtensionNotAllowed'
@@ -71,6 +69,7 @@ function checkExtension(req, res, next) {
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
+      console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>', res);
       fs.unlink(req.file.path, err => {
         if (err) {
           console.log(err);
@@ -92,12 +91,17 @@ function clamAV(req, res, next) {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
+
   request.post({
     url: config.get('clamRest.url'),
     formData: fileData,
     timeout: parseInt(config.get('timeout')) * 1000,
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
+    console.log('>>>>>>>>>>> http Response >>>>>>>>>>>>>>>', httpResponse);
+    console.log('>>>>>>>>>>> body >>>>>>>>>>>>>>>', body);
+    console.log('>>>>>>>>>>> error >>>>>>>>>>>>>>>', err);
+
     if (err) {
       logError(req, err);
       err = {
@@ -109,6 +113,7 @@ function clamAV(req, res, next) {
       };
     }
 
+    console.log('finished');
     debug('no virus found');
     next(err);
   });
@@ -169,29 +174,31 @@ function decrypt_deprecated(text) {
   return dec;
 }
 
+function returnURL (req, res) {
+  const s3Url = new URL(req.s3Url);
+  const s3Item = s3Url.pathname;
+  const Date = s3Url.searchParams.get('X-Amz-Date');
+  const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
+
+  if (process.env.DEBUG) {
+    logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
+    logger.debug(fileId);
+  }
+
+  debug('returning file-vault url');
+
+  res.status(200).json({
+    url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
+  });
+}
+
 router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  //clamAV,
+  clamAV,
   s3Upload,
-  (req, res) => {
-    const s3Url = new URL(req.s3Url);
-    const s3Item = s3Url.pathname;
-    const Date = s3Url.searchParams.get('X-Amz-Date');
-    const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
-
-    if (process.env.DEBUG) {
-      logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
-      logger.debug(fileId);
-    }
-
-    debug('returning file-vault url');
-
-    res.status(200).json({
-      url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
-    });
-  }
+  returnURL
 ]);
 
 router.get('/:id', (req, res, next) => {

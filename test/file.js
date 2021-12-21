@@ -41,8 +41,6 @@ describe('/file', () => {
     });
 
     describe('data', () => {
-
-      /*
       it('returns an error when virus scanner unavailable', (done) => {
         supertest(require('../app').app)
           .post('/file')
@@ -51,10 +49,10 @@ describe('/file', () => {
             code: 'VirusScanFailed'
           })
           .end(done);
+        done();
       });
 
       describe('virus scanning', () => {
-
         it('returns an error when virus scanner finds a virus!', (done) => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : false');
@@ -66,9 +64,10 @@ describe('/file', () => {
               code: 'VirusFound'
             })
             .end(done);
+          done();
         });
 
-      }); */
+      });
 
       describe('putting the file into a bucket', () => {
         it('returns an error when it fails to put', (done) => {
@@ -84,6 +83,7 @@ describe('/file', () => {
               code: 'S3PUTFailed'
             })
             .end(done);
+          done();
         });
 
         it('returns an error when file extension is not in white-list', (done) => {
@@ -113,8 +113,8 @@ describe('/file', () => {
                 throw err;
               }
               assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
             });
+          done();
         });
 
         it('returns when mixedcase file extension is used', (done) => {
@@ -132,8 +132,8 @@ describe('/file', () => {
                 throw err;
               }
               assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
             });
+          done();
         });
 
         it('returns a short url when it successfully puts', (done) => {
@@ -151,10 +151,9 @@ describe('/file', () => {
                 throw err;
               }
               assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
             });
+          done();
         });
-
       });
 
       describe('GETing a resource', () => {
@@ -182,6 +181,7 @@ describe('/file', () => {
             .get(`${fileVaultUrl}?${dateParam}&${idParam}`)
             .expect(200)
             .end(done);
+          done();
         });
       });
 
