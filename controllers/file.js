@@ -71,10 +71,11 @@ function checkExtension(req, res, next) {
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
-      console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
+    //onFinished(req, (err, res) => {
+      //console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
       fs.unlink(req.file.path, err => {
         if (err) {
-          console.log(err);
+          console.log("$$$$$$$$$$$$$$$$$$$$$$$$$", err);
         } else {
           console.log("\n >>>>>>>>>>>>>>>>>>> Deleted file: ", req.file.path);
         }
@@ -83,6 +84,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
     debug('deleted file on finish');
     next();
   } else {
+    console.log("\n >>>>>>>>>>>>>>>>>>> File Not FOUND");
     next({
       code: 'FileNotFound'
     });
@@ -106,6 +108,7 @@ function clamAV(req, res, next) {
     console.log('>>>>>>>>>>> body >>>>>>>>>>>>>>>', JSON.stringify(body));
     console.log('>>>>>>>>>>> error >>>>>>>>>>>>>>>', JSON.stringify(err));
     if (err) {
+      console.log('Error in getting file');
       logError(req, err);
       err = {
         code: 'VirusScanFailed'
@@ -118,7 +121,7 @@ function clamAV(req, res, next) {
       next(err);
     } else {
       debug('no virus found');
-      next();
+      next(req, res);
     }
   });
 }
@@ -130,6 +133,18 @@ function s3Upload(req, res, next) {
     Key: req.file.filename
   };
 
+  /* Checking file exists */
+  console.log('................Checking file exists', req.file.path);
+  try {
+    if (fs.existsSync(req.file.path)) {
+      console.log('................ File still exists', req.file.path);
+    } else {
+      console.log('................ File not found', req.file.path);
+    }
+  } catch(err) {
+    console.log('................ File not found', req.file.path);
+  }
+
   s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
@@ -137,6 +152,7 @@ function s3Upload(req, res, next) {
     ContentType: req.file.mimetype
   }), (err) => {
     if (err) {
+      console.log('>>>>>>>> error >>>>>>>>>>>>', err);
       logError(req, err);
       err = {
         code: 'S3PUTFailed'

@@ -27,7 +27,6 @@ describe('/file', () => {
   });
 
   describe('POSTing', () => {
-
     describe('no data', () => {
       it('returns an error', (done) => {
         supertest(require('../app').app)
@@ -153,7 +152,6 @@ describe('/file', () => {
               done();
             });
         });
-
       });
 
       describe('GETing a resource', () => {
@@ -183,9 +181,7 @@ describe('/file', () => {
             .end(done);
         });
       });
-
     });
-
   });
 
 });
