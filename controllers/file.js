@@ -121,7 +121,8 @@ function clamAV(req, res, next) {
       next(err);
     } else {
       debug('no virus found');
-      next(req, res);
+      //next();
+      s3Upload(req, res, next);
     }
   });
 }
@@ -136,14 +137,14 @@ function s3Upload(req, res, next) {
   /* Checking file exists */
   console.log('................Checking file exists', req.file.path);
   try {
-    if (fs.existsSync(req.file.path)) {
+    if (fs.access(req.file.path)) {
       console.log('................ File still exists', req.file.path);
     } else {
       console.log('................ File not found', req.file.path);
     }
   } catch(err) {
     console.log('................ File not found', req.file.path);
-  }
+  };
 
   s3.putObject(Object.assign({}, params, {
     Body: fs.createReadStream(req.file.path),
@@ -162,12 +163,32 @@ function s3Upload(req, res, next) {
         Expires: config.get('aws.expiry')
       }));
       console.log('>>>>>>> signed URL >>>>>>>', req.s3Url);
+      returnURL(req, res);
     }
 
     debug('uploaded file');
     next(err);
   });
 }
+
+function returnURL (req, res) {
+  const s3Url = new URL(req.s3Url);
+  const s3Item = s3Url.pathname;
+  const Date = s3Url.searchParams.get('X-Amz-Date');
+  const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
+
+  if (process.env.DEBUG) {
+    logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
+    logger.debug(fileId);
+  }
+
+  debug('returning file-vault url');
+
+  res.status(200).json({
+    url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
+  });
+}
+
 // Following this example
 // https://stackoverflow.com/questions/60369148/how-do-i-replace-deprecated-crypto-createcipher-in-node-js
 function encrypt(text) {
@@ -199,8 +220,9 @@ router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  clamAV,
-  s3Upload,
+  clamAV//,
+  //s3Upload,
+  /*
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
@@ -217,7 +239,7 @@ router.post('/', [
     res.status(200).json({
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
     });
-  }
+  }*/
 ]);
 
 router.get('/:id', (req, res, next) => {
