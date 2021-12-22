@@ -72,12 +72,13 @@ function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
       console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
-      /*
       fs.unlink(req.file.path, err => {
         if (err) {
           console.log(err);
+        } else {
+          console.log("\n >>>>>>>>>>>>>>>>>>> Deleted file: ", req.file.path);
         }
-      }); */
+      });
     });
     debug('deleted file on finish');
     next();
@@ -117,7 +118,7 @@ function clamAV(req, res, next) {
       next(err);
     } else {
       debug('no virus found');
-      s3Upload(req, res, next);
+      next();
     }
   });
 }
@@ -144,6 +145,7 @@ function s3Upload(req, res, next) {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
         Expires: config.get('aws.expiry')
       }));
+      console.log('>>>>>>> signed URL >>>>>>>', req.s3Url);
     }
 
     debug('uploaded file');
@@ -182,7 +184,7 @@ router.post('/', [
   checkExtension,
   deleteFileOnFinishedRequest,
   clamAV,
-  //s3Upload,
+  s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
