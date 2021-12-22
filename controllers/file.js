@@ -69,6 +69,8 @@ function checkExtension(req, res, next) {
 }
 
 function deleteFileOnFinishedRequest(req, res, next) {
+
+  /*
   if (req.file) {
     onFinished(res, () => {
       console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
@@ -84,7 +86,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
     next({
       code: 'FileNotFound'
     });
-  }
+  } */
 }
 
 function clamAV(req, res, next) {
