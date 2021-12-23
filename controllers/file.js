@@ -73,13 +73,14 @@ function deleteFileOnFinishedRequest(req, res, next) {
     onFinished(res, () => {
     //onFinished(req, (err, res) => {
       //console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
+      /*
       fs.unlink(req.file.path, err => {
         if (err) {
           console.log("$$$$$$$$$$$$$$$$$$$$$$$$$", err);
         } else {
           console.log("\n >>>>>>>>>>>>>>>>>>> Deleted file: ", req.file.path);
         }
-      });
+      }); */
     });
     debug('deleted file on finish');
     next();
@@ -163,6 +164,13 @@ function s3Upload(req, res, next) {
         Expires: config.get('aws.expiry')
       }));
       console.log('>>>>>>> signed URL >>>>>>>', req.s3Url);
+      fs.unlink(req.file.path, err => {
+        if (err) {
+          console.log("$$$$$$$$$$$$$$$$$$$$$$$$$", err);
+        } else {
+          console.log("\n >>>>>>>>>>>>>>>>>>> Deleted file: ", req.file.path);
+        }
+      });
       returnURL(req, res);
     }
 
