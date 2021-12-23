@@ -100,9 +100,9 @@ function clamAV(req, res, next) {
   };
   request.post({
     url: config.get('clamRest.url'),
-    formData: fileData,
-    timeout: parseInt(config.get('timeout')) * 1000,
-    fileSize: parseInt(config.get('fileSize'))
+    formData: fileData//,
+    //timeout: parseInt(config.get('timeout')) * 1000,
+    //fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     console.log('>>>>>>>>>>> http Response >>>>>>>>>>>>>>>', JSON.stringify(httpResponse));
     console.log('>>>>>>>>>>> body >>>>>>>>>>>>>>>', JSON.stringify(body));
