@@ -92,6 +92,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
+// eslint-disable-next-line unexpected-token
 async function clamAV(req, res, next) {
   console.log('>>>>>>>>>>> checking clamav >>>>>>>>>>>>>>>');
   debug('checking for virus');

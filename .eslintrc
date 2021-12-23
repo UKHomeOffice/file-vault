@@ -9,3 +9,6 @@ globals:
 
 rules:
   consistent-return: off
+
+parserOptions:
+  ecmaVersion: 8
