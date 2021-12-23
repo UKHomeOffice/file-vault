@@ -19,10 +19,11 @@ describe('/file', () => {
   });
 
   describe('config', () => {
-    it('returns an error if the default password isnt set', () => {
+    it('returns an error if the default password isnt set', (done) => {
       process.env.NODE_CONFIG = '{"aws": {"password":""}}';
 
       assert.throws(() => require('../controllers/file'), Error, 'please set the AWS_PASSWORD');
+      done();
     });
   });
 

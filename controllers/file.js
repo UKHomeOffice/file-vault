@@ -92,18 +92,18 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
-function clamAV(req, res, next) {
+async function clamAV(req, res, next) {
   console.log('>>>>>>>>>>> checking clamav >>>>>>>>>>>>>>>');
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
-  request.post({
+  await request.post({
     url: config.get('clamRest.url'),
-    formData: fileData//,
-    //timeout: parseInt(config.get('timeout')) * 1000,
-    //fileSize: parseInt(config.get('fileSize'))
+    formData: fileData,
+    timeout: parseInt(config.get('timeout')) * 1000,
+    fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     console.log('>>>>>>>>>>> http Response >>>>>>>>>>>>>>>', JSON.stringify(httpResponse));
     console.log('>>>>>>>>>>> body >>>>>>>>>>>>>>>', JSON.stringify(body));
