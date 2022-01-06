@@ -92,7 +92,6 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
-// eslint-disable-next-line unexpected-token
 async function clamAV(req, res, next) {
   console.log('>>>>>>>>>>> checking clamav >>>>>>>>>>>>>>>');
   debug('checking for virus');
@@ -191,11 +190,14 @@ function returnURL (req, res) {
     logger.debug(fileId);
   }
 
-  debug('returning file-vault url');
-
-  res.status(200).json({
+  const returnedURL = {
     url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
-  });
+  };
+
+  debug('returning file-vault url');
+  console.log('\n >>>>>>>>> returning file-vault url >>>>>>>>>> ', returnedURL);
+
+  res.status(200).json(returnedURL);
 }
 
 // Following this example
