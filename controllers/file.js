@@ -229,8 +229,8 @@ router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  //clamAV
-  s3Upload
+  clamAV
+  //s3Upload
 ]);
 
 router.get('/:id', (req, res, next) => {
