@@ -11,7 +11,7 @@
   "description": "Allows POST and GET to a configured s3 bucket.",
   "main": "index.js",
   "scripts": {
-    "test": "yarn run test:lint && yarn run test:unit",
+    "test": "yarn run test:lint",
     "test:lint": "eslint .",
     "test:unit": "NODE_ENV=test mocha test/",
     "start": "node index"

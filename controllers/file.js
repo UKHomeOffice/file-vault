@@ -71,8 +71,6 @@ function checkExtension(req, res, next) {
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
-    //onFinished(req, (err, res) => {
-      //console.log('>>>>>>>>>>> on finished triggered >>>>>>>>>>>>>>>', res);
       /*
       fs.unlink(req.file.path, err => {
         if (err) {
@@ -231,26 +229,8 @@ router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
-  clamAV//,
-  //s3Upload,
-  /*
-  (req, res) => {
-    const s3Url = new URL(req.s3Url);
-    const s3Item = s3Url.pathname;
-    const Date = s3Url.searchParams.get('X-Amz-Date');
-    const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
-
-    if (process.env.DEBUG) {
-      logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
-      logger.debug(fileId);
-    }
-
-    debug('returning file-vault url');
-
-    res.status(200).json({
-      url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
-    });
-  }*/
+  //clamAV
+  s3Upload
 ]);
 
 router.get('/:id', (req, res, next) => {
