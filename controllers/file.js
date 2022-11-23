@@ -170,7 +170,15 @@ function decrypt_deprecated(text) {
 }
 
 router.post('/', [
+  function (req,res, next) {
+    console.log('Got the request, trying to parse it with multer...');
+    next();
+  },
   upload.single('document'),
+  (req,res, next) => {
+    console.log('Parsed it with Multer, we have a file!');
+    next();
+  },
   checkExtension,
   deleteFileOnFinishedRequest,
   clamAV,
