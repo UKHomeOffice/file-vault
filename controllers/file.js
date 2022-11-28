@@ -64,7 +64,7 @@ function checkExtension(req, res, next) {
       });
     }
   } else {
-    console.log(`fileTypes is empty - allowing ${uploadedFileExtension}`);
+    console.log(`fileTypes is empty`);
       
     debug('passed file extension check');
     next();
