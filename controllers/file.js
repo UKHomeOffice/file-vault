@@ -45,7 +45,6 @@ function logError(req, err) {
 }
 
 function checkExtension(req, res, next) {
-  logger.debug('checkExtension');
   const fileTypes = config.get('fileTypes');
 
   if (fileTypes) {
@@ -58,14 +57,14 @@ function checkExtension(req, res, next) {
       debug('passed file extension check');
       next();
     } else {
-      logger.debug(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
+      console.log(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
       debug(`failed file extension check - ${uploadedFileExtension} is not allowed`);
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
-    logger.debug(`fileTypes is empty`);
+    console.log(`fileTypes is empty`);
       
     debug('passed file extension check');
     next();
@@ -73,7 +72,7 @@ function checkExtension(req, res, next) {
 }
 
 function deleteFileOnFinishedRequest(req, res, next) {
-  logger.debug('deleteFileOnFinishedRequest');
+  console.log('deleteFileOnFinishedRequest');
   if (req.file) {
     onFinished(res, () => {
       fs.unlink(req.file.path, err => {
@@ -92,7 +91,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
-  logger.debug('clamAV');
+  console.log('clamAV');
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
@@ -121,7 +120,7 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
-  logger.debug('s3Upload');
+  console.log('s3Upload');
   debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
@@ -177,8 +176,9 @@ function decrypt_deprecated(text) {
 }
 
 router.post('/', [
-  function () {
-    logger.debug('post begain');
+  function (req,res,next) {
+    logger.debug('post began');
+    next();
   },
   upload.single('document'),
   checkExtension,
@@ -186,7 +186,7 @@ router.post('/', [
   clamAV,
   s3Upload,
   (req, res) => {
-    logger.debug('finishing');
+    console.log('finishing');
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
     const Date = s3Url.searchParams.get('X-Amz-Date');
