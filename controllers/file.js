@@ -45,6 +45,7 @@ function logError(req, err) {
 }
 
 function checkExtension(req, res, next) {
+  logger.debug('checkExtension');
   const fileTypes = config.get('fileTypes');
 
   if (fileTypes) {
@@ -52,19 +53,19 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
-      console.log(`passed file extension check - ${uploadedFileExtension} is allowed in ${fileTypes}`);
-      
+      logger.info(`passed file extension check - ${uploadedFileExtension} is allowed in ${fileTypes}`);
+
       debug('passed file extension check');
       next();
     } else {
-      console.log(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
+      logger.debug(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
       debug(`failed file extension check - ${uploadedFileExtension} is not allowed`);
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
-    console.log(`fileTypes is empty`);
+    logger.debug(`fileTypes is empty`);
       
     debug('passed file extension check');
     next();
@@ -72,7 +73,7 @@ function checkExtension(req, res, next) {
 }
 
 function deleteFileOnFinishedRequest(req, res, next) {
-  console.log('deleteFileOnFinishedRequest');
+  logger.debug('deleteFileOnFinishedRequest');
   if (req.file) {
     onFinished(res, () => {
       fs.unlink(req.file.path, err => {
@@ -91,7 +92,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
-  console.log('clamAV');
+  logger.debug('clamAV');
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
@@ -120,7 +121,7 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
-  console.log('s3Upload');
+  logger.debug('s3Upload');
   debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
@@ -176,13 +177,16 @@ function decrypt_deprecated(text) {
 }
 
 router.post('/', [
+  function () {
+    logger.debug('post begain');
+  },
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
   (req, res) => {
-    console.log('finishing');
+    logger.debug('finishing');
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
     const Date = s3Url.searchParams.get('X-Amz-Date');
