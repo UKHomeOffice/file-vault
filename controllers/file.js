@@ -56,8 +56,8 @@ function checkExtension(req, res, next) {
       debug('passed file extension check');
       next();
     } else {
-
-      debug('failed file extension check');
+      console.log(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
+      debug(`failed file extension check - ${uploadedFileExtension} is not allowed`);
       next({
         code: 'FileExtensionNotAllowed'
       });
