@@ -57,14 +57,14 @@ function checkExtension(req, res, next) {
       debug('passed file extension check');
       next();
     } else {
-      console.log(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
+      logger.info(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
       debug(`failed file extension check - ${uploadedFileExtension} is not allowed`);
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
-    console.log(`fileTypes is empty`);
+    logger.info(`fileTypes is empty`);
       
     debug('passed file extension check');
     next();
@@ -72,7 +72,7 @@ function checkExtension(req, res, next) {
 }
 
 function deleteFileOnFinishedRequest(req, res, next) {
-  console.log('deleteFileOnFinishedRequest');
+  logger.info('deleteFileOnFinishedRequest');
   if (req.file) {
     onFinished(res, () => {
       fs.unlink(req.file.path, err => {
@@ -91,7 +91,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
-  console.log('clamAV');
+  logger.info('clamAV');
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
@@ -120,7 +120,7 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
-  console.log('s3Upload');
+  logger.info('s3Upload');
   debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
@@ -176,8 +176,8 @@ function decrypt_deprecated(text) {
 }
 
 router.post('/', [
-  function (req,res,next) {
-    logger.debug('post began');
+  function (req, res, next) {
+    logger.info('Upload Started');
     next();
   },
   upload.single('document'),
