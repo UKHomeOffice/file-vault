@@ -34,6 +34,7 @@ app.use((err, req, res, next) => {
 
 module.exports.start = () => {
   app.listen(config.get('port'), () => {
+    logger.info('Debug Test');
     logger.info(`Server started on port ${config.get('port')}`);
   });
 };

@@ -52,23 +52,27 @@ function checkExtension(req, res, next) {
     const fileAllowed = fileTypes.split(',')
       .find((allowedExtension) => uploadedFileExtension === allowedExtension);
     if (fileAllowed) {
+      logger.info(`passed file extension check - ${uploadedFileExtension} is allowed in ${fileTypes}`);
 
       debug('passed file extension check');
       next();
     } else {
-
-      debug('failed file extension check');
+      logger.info(`failed file extension check - ${uploadedFileExtension} is not allowed in ${fileTypes}`);
+      debug(`failed file extension check - ${uploadedFileExtension} is not allowed`);
       next({
         code: 'FileExtensionNotAllowed'
       });
     }
   } else {
+    logger.info(`fileTypes is empty`);
+      
     debug('passed file extension check');
     next();
   }
 }
 
 function deleteFileOnFinishedRequest(req, res, next) {
+  logger.info('deleteFileOnFinishedRequest');
   if (req.file) {
     onFinished(res, () => {
       fs.unlink(req.file.path, err => {
@@ -87,6 +91,7 @@ function deleteFileOnFinishedRequest(req, res, next) {
 }
 
 function clamAV(req, res, next) {
+  logger.info('clamAV');
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
@@ -115,6 +120,7 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
+  logger.info('s3Upload');
   debug('uploding to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
@@ -170,12 +176,17 @@ function decrypt_deprecated(text) {
 }
 
 router.post('/', [
+  function (req, res, next) {
+    logger.info('Upload Started');
+    next();
+  },
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
   clamAV,
   s3Upload,
   (req, res) => {
+    console.log('finishing');
     const s3Url = new URL(req.s3Url);
     const s3Item = s3Url.pathname;
     const Date = s3Url.searchParams.get('X-Amz-Date');
