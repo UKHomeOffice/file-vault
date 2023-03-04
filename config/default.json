@@ -1,5 +1,6 @@
 {
   "file-vault-url": "http://localhost",
+  "returnOriginalSignedUrl": "no",
   "port": 3000,
   "clamRest": {
     "url": "CLAMAV_REST_URL"

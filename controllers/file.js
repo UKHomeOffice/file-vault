@@ -188,9 +188,15 @@ router.post('/', [
 
     debug('returning file-vault url');
 
-    res.status(200).json({
+    const responseData = {
       url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
-    });
+    };
+
+    if (config.get('returnOriginalSignedUrl') === 'yes') {
+      responseData.originalSignedUrl = req.s3Url;
+    }
+
+    res.status(200).json(responseData);
   }
 ]);
 

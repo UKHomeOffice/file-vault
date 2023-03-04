@@ -1,5 +1,6 @@
 {
   "file-vault-url": "FILE_VAULT_URL",
+  "returnOriginalSignedUrl": "RETURN_ORIGINAL_SIGNED_URL",
   "clamRest": {
     "url": "CLAMAV_REST_URL"
   },
