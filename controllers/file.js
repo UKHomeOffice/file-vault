@@ -38,10 +38,6 @@ AWS.config.update({
 
 const s3 = new AWS.S3();
 
-function logError(req, err) {
-  req.log('error', err);
-}
-
 function checkExtension(req, res, next) {
   const fileTypes = config.get('fileTypes');
 
@@ -97,7 +93,7 @@ function clamAV(req, res, next) {
     fileSize: parseInt(config.get('fileSize'))
   }, (err, httpResponse, body) => {
     if (err) {
-      logError(req, err);
+      logger.log('error', err);
       err = {
         code: 'VirusScanFailed'
       };
@@ -126,7 +122,7 @@ function s3Upload(req, res, next) {
     ContentType: req.file.mimetype
   }), (err) => {
     if (err) {
-      logError(req, err);
+      logger.log('error', err);
       err = {
         code: 'S3PUTFailed'
       };
@@ -217,7 +213,7 @@ router.get('/:id', (req, res, next) => {
     timeout: config.get('timeout') * 1000
   }, (err, resp, buffer) => {
     if (err) {
-      logError(req, err);
+      logger.log('error', err);
       return next(err);
     }
     res.writeHead(resp.statusCode, resp.headers);
