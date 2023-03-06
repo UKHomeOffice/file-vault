@@ -14,7 +14,8 @@
     "test": "yarn run test:lint && yarn run test:unit",
     "test:lint": "eslint .",
     "test:unit": "NODE_ENV=test mocha test/",
-    "start": "node index"
+    "start": "node index",
+    "start:dev": "nodemon -r dotenv/config index"
   },
   "author": "UKHomeOffice",
   "license": "MIT",
@@ -23,7 +24,7 @@
     "config": "^1.24.0",
     "debug": "^4.1.1",
     "express": "^4.17.1",
-    "hof": "^19.5.3",
+    "hof": "^20.2.2",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "multer": "^1.2.1",
@@ -31,10 +32,12 @@
     "request": "^2.79.0"
   },
   "devDependencies": {
+    "dotenv": "^16.0.3",
     "eslint": "^3.13.1",
     "eslint-config-homeoffice": "^2.0.0",
     "mocha": "^3.2.0",
     "nock": "^9.1.0",
+    "nodemon": "^2.0.21",
     "supertest": "^2.0.1"
   }
 }
