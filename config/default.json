@@ -1,5 +1,6 @@
 {
   "file-vault-url": "http://localhost",
+  "allowGenerateLinkRoute": "no",
   "returnOriginalSignedUrl": "no",
   "port": 3000,
   "clamRest": {

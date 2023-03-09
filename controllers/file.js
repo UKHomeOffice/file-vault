@@ -109,7 +109,7 @@ function clamAV(req, res, next) {
 }
 
 function s3Upload(req, res, next) {
-  debug('uploding to s3');
+  debug('uploading to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
@@ -220,5 +220,30 @@ router.get('/:id', (req, res, next) => {
     res.end(buffer);
   });
 });
+
+if (config.allowGenerateLinkRoute === 'yes') {
+  router.get('/generate-link/:id', (req, res, next) => {
+    debug('generating presign url from s3');
+
+    s3.getSignedUrl('getObject', {
+        Bucket: config.get('aws.bucket'),
+        Key: req.params.id,
+        Expires: config.get('aws.expiry')
+      }, (err, url) => {
+        request.get({
+          url,
+          encoding: null,
+          timeout: config.get('timeout') * 1000
+        }, (err, resp, buffer) => {
+          if (err) {
+            logger.log('error', err);
+            return next(err);
+          }
+          res.writeHead(resp.statusCode, resp.headers);
+          res.end(buffer);
+        });
+      });
+  });
+}
 
 module.exports = router;

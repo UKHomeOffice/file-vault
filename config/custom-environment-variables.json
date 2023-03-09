@@ -1,5 +1,6 @@
 {
   "file-vault-url": "FILE_VAULT_URL",
+  "allowGenerateLinkRoute": "ALLOW_GENERATE_LINK_ROUTE",
   "returnOriginalSignedUrl": "RETURN_ORIGINAL_SIGNED_URL",
   "clamRest": {
     "url": "CLAMAV_REST_URL"
