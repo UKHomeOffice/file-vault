@@ -41,21 +41,21 @@ steps:
 
 # Trivy Security Scannner
 - name: scan-image
-    pull: always
-    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
-    resources:
-      limits:
-        cpu: 1000
-        memory: 1024Mi
-    environment:
-      IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-      SEVERITY: MEDIUM,HIGH,CRITICAL
-      FAIL_ON_DETECTION: false
-      IGNORE_UNFIXED: true
-      ALLOW_CVE_LIST_FILE: hof-services-config/file-vault/trivy-cve-exceptions.txt
-    when:
-      branch: master
-      event: [ push, pull_request, tag ]
+  pull: always
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+  resources:
+    limits:
+      cpu: 1000
+      memory: 1024Mi
+  environment:
+    IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+    SEVERITY: MEDIUM,HIGH,CRITICAL
+    FAIL_ON_DETECTION: false
+    IGNORE_UNFIXED: true
+    # ALLOW_CVE_LIST_FILE: hof-services-config/file-vault/trivy-cve-exceptions.txt
+  when:
+    branch: master
+    event: [ push, pull_request, tag ]
 
 services:
   - name: docker
