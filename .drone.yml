@@ -40,7 +40,7 @@ steps:
     event: [ push, pull_request ]
 
 # Trivy Security Scannner
-- name: scan-image
+- name: scan_packages
   pull: always
   image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
   resources:
@@ -48,7 +48,25 @@ steps:
       cpu: 1000
       memory: 1024Mi
   environment:
-    IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+    IMAGE_NAME: file-vault:$${DRONE_COMMIT_SHA}
+    SEVERITY: MEDIUM,HIGH,CRITICAL
+    FAIL_ON_DETECTION: false
+    IGNORE_UNFIXED: true
+    # ALLOW_CVE_LIST_FILE: hof-services-config/file-vault/trivy-cve-exceptions.txt
+  when:
+    branch: master
+    event: [ push, pull_request, tag ]
+
+# Trivy for base image 
+- name: scan_image_os
+  pull: always
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+  resources:
+    limits:
+      cpu: 1000
+      memory: 1024Mi
+  environment:
+    IMAGE_NAME: node:14-alpine@sha256:5c33bc6f021453ae2e393e6e20650a4df0a4737b1882d389f17069dc1933fdc5
     SEVERITY: MEDIUM,HIGH,CRITICAL
     FAIL_ON_DETECTION: false
     IGNORE_UNFIXED: true
