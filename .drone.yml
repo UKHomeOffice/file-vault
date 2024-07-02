@@ -3,6 +3,10 @@ kind: pipeline
 name: default
 type: kubernetes
 
+environment: 
+  IMAGE_URL: quay.io/ukhomeofficedigital
+  IMAGE_REPO: file-vault
+
 steps:
 - name: build
   pull: if-not-exists
@@ -19,7 +23,7 @@ steps:
   image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
   commands:
   - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-  - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
+  - docker build --no-cache -t $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} .
   when:
     branch: master
     event: [ push, pull_request ]
@@ -33,8 +37,8 @@ steps:
   commands:
   - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
   - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
-  - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-  - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+  - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
+  - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
   when:
     branch: master
     event: [ push, pull_request ]
