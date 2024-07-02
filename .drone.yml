@@ -6,7 +6,7 @@ type: kubernetes
 steps:
 - name: build
   pull: if-not-exists
-  image: node:14
+  image: node:lts
   commands:
   - yarn install --frozen-lockfile
   - yarn run test
@@ -39,8 +39,8 @@ steps:
     branch: master
     event: [ push, pull_request ]
 
-     # Trivy Security Scannner
-  - name: scan-image
+# Trivy Security Scannner
+- name: scan-image
     pull: always
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
     resources:
@@ -48,21 +48,17 @@ steps:
         cpu: 1000
         memory: 1024Mi
     environment:
-      IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}
+      IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
       SEVERITY: MEDIUM,HIGH,CRITICAL
       FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: true
       ALLOW_CVE_LIST_FILE: hof-services-config/file-vault/trivy-cve-exceptions.txt
     when:
       branch: master
-      event:
-      - pull_request
-      - push
-      - tag
-
+      event: [ push, pull_request, tag ]
 
 services:
-  - name: docker
+- name: docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
 ...
