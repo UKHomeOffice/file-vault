@@ -10,7 +10,7 @@ environment:
 steps:
 - name: build
   pull: if-not-exists
-  image: node:18 
+  image: node:14
   commands:
   - yarn install --frozen-lockfile
   - yarn run test
@@ -70,7 +70,7 @@ steps:
       cpu: 1000
       memory: 1024Mi
   environment:
-    IMAGE_NAME: node:18-alpine@sha256:2322b1bb3917b313f2e9308395aa5c39d51b91cc92a5d4d5be6d0451fcfb4d24
+    IMAGE_NAME: 14-alpine@sha256:5c33bc6f021453ae2e393e6e20650a4df0a4737b1882d389f17069dc1933fdc5
 
     SEVERITY: MEDIUM,HIGH,CRITICAL
     FAIL_ON_DETECTION: false
