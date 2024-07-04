@@ -1,6 +1,6 @@
 #FROM node:20-alpine3.20@sha256:df01469346db2bf1cfc1f7261aeab86b2960efa840fe2bd46d83ff339f463665
 #FROM node:14.19.3-alpine3.16@sha256:b5fd5877b6bb2bb443c63ea0e7a8dc5197d8f01ed4a8ca1416a203c52bcf283c
-FROM node:19.5.0-alpine3.16@sha256:5e6e9c2ac7ae6d48d3eefff99989e09eb94066ed33fcfc43f3f7c13dcc9cb61f
+FROM node:16.18.1-alpine3.17@sha256:b9d75749402dc0ec77765d92ce48f9a506767e7752261b08a31c6314fbcca8ba
 
 USER root
 
