@@ -10,7 +10,7 @@ environment:
 steps:
 - name: build
   pull: if-not-exists
-  image: node:20
+  image: node:14
   commands:
   - yarn install --frozen-lockfile
   - yarn run test
