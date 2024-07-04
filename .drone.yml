@@ -71,7 +71,6 @@ steps:
       memory: 1024Mi
   environment:
     IMAGE_NAME: node:20-alpine3.20@sha256:df01469346db2bf1cfc1f7261aeab86b2960efa840fe2bd46d83ff339f463665
-
     SEVERITY: MEDIUM,HIGH,CRITICAL
     FAIL_ON_DETECTION: false
     IGNORE_UNFIXED: true
