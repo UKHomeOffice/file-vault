@@ -7,7 +7,7 @@ USER root
 
 # Update packages as a result of Anchore security vulnerability checks
 RUN apk update && \
-    apk add --upgrade gnutls binutils nodejs apk-tools libjpeg-turbo libcurl libx11 libxml2
+    apk add --upgrade gnutls binutils nodejs apk-tools libjpeg-turbo libcurl libx11 libxml2  libcrypto3 libssl3
 
 # Setup nodejs group & nodejs user
 RUN addgroup --system nodejs --gid 998 && \
