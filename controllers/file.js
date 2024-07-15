@@ -102,7 +102,13 @@ function clamAV(req, res, next) {
       err = {
         code: 'VirusScanFailed'
       };
-    } else if (body.indexOf('false') !== -1) {
+    }
+    else if (httpResponse && httpResponse.statusCode >= 400 ){
+      err = {
+        code: 'VirusScanFailed'
+      };
+    }
+    else if (body.indexOf('false') !== -1) {
       err = {
         code: 'VirusFound'
       };
