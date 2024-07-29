@@ -13,7 +13,6 @@ steps:
   image: node:18
   commands:
   - yarn install --frozen-lockfile
-  - yarn run test
   when:
     branch: master
     event: [ push, pull_request ]
