@@ -1575,7 +1575,7 @@ eslint-plugin-mocha@^4.5.1:
   dependencies:
     ramda "^0.25.0"
 
-eslint-plugin-one-variable-per-var@0.0.3:
+eslint-plugin-one-variable-per-var@0.0.3, eslint-plugin-one-variable-per-var@^0.0.3:
   version "0.0.3"
   resolved "https://registry.yarnpkg.com/eslint-plugin-one-variable-per-var/-/eslint-plugin-one-variable-per-var-0.0.3.tgz#803566272e3ebaacb438eb34ec543e0e21385d9e"
   integrity sha512-gdqNqxyuGNjiJFIbOFMV5rs+cAR8TwQmldwsHINFNtgsm7/D5ogFmplibJL4UzQpINb5RwiXdOY0Ixed71PtIQ==
