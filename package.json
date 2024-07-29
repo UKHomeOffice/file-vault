@@ -6,7 +6,7 @@
     "url": "https://github.com/UKHomeOffice/file-vault"
   },
   "engines": {
-    "node": ">=14.15.0"
+    "node": ">=18.12.1"
   },
   "description": "Allows POST and GET to a configured s3 bucket.",
   "main": "index.js",
@@ -28,6 +28,7 @@
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "multer": "^1.2.1",
+    "node": "^18.12.1",
     "on-finished": "^2.3.0",
     "request": "^2.79.0",
     "shelljs": "^0.8.5",
