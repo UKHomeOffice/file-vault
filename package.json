@@ -20,24 +20,27 @@
   "author": "UKHomeOffice",
   "license": "MIT",
   "dependencies": {
-    "aws-sdk": "2.167.0",
+    "aws-sdk": "^2.1664.0",
     "config": "^1.24.0",
-    "debug": "^4.1.1",
+    "debug": "^4.3.6",
     "express": "^4.17.1",
     "hof": "^21.0.1",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "multer": "^1.2.1",
     "on-finished": "^2.3.0",
-    "request": "^2.79.0"
+    "request": "^2.79.0",
+    "shelljs": "^0.8.5",
+    "superagent": "^9.0.2",
+    "tough-cookie": "^4.1.4"
   },
   "devDependencies": {
     "dotenv": "^16.0.3",
-    "eslint": "^3.13.1",
-    "eslint-config-homeoffice": "^2.0.0",
-    "mocha": "^3.2.0",
+    "eslint": "^9.8.0",
+    "eslint-config-homeoffice": "^2.2.0",
+    "mocha": "^10.7.0",
     "nock": "^9.1.0",
     "nodemon": "^2.0.21",
-    "supertest": "^2.0.1"
+    "supertest": "^7.0.0"
   }
 }
