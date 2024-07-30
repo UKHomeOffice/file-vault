@@ -1,3 +1,10 @@
-extends:
-  - '../.eslintrc'
-  - 'homeoffice/config/testing'
+{
+  "parserOptions": {
+      "ecmaVersion": 12
+  },
+
+  "env": {
+      "es6": true
+  }
+}
+
