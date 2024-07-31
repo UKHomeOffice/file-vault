@@ -737,7 +737,7 @@ aws4@^1.8.0:
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.13.0.tgz#d9b802e9bb9c248d7be5f7f5ef178dc3684e9dcc"
   integrity sha512-3AungXC4I8kKsS9PuS4JH2nc+0bVY/mjgrephHTIi8fpEeGsTHBUJeosp0Wc1myYMElmD0B3Oc4XL/HVJ4PV2g==
 
-axios@^1.5.1, axios@^1.6.1:
+axios@^1.6.1:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/axios/-/axios-1.7.2.tgz#b625db8a7051fbea61c35a3cbb3a1daa7b9c7621"
   integrity sha512-2A8QhOMrbomlDuiLeK9XibIBzuHeRcqqNOHp0Cyp5EoJ1IFDh+XZH3A6BkXtv0K4gFGCI0Y4BM7B1wOEi0Rmgw==
@@ -2169,7 +2169,7 @@ express-healthcheck@^0.1.0:
   resolved "https://registry.yarnpkg.com/express-healthcheck/-/express-healthcheck-0.1.0.tgz#cabec78129c4cb90cd7fb894dfae21b82e27cb07"
   integrity sha512-FKQVgDo1FMSOYflEq4g6CvNk6stbpkuX0MWXmul8dSICuw/b+3JgoYOq/aiDcYid5k42jh/4HYLYC/M/qDBEuQ==
 
-express-partial-templates@^0.2.1:
+express-partial-templates@^0.2.0, express-partial-templates@^0.2.1:
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/express-partial-templates/-/express-partial-templates-0.2.1.tgz#191075f1194402893ddbbc8163d38406015b765b"
   integrity sha512-S9i9wfVwYk6yASd/h2imS8a0W9eT+4CNWSSi2yXgyzFmOtc3pqsxcaE8ZCZOuIUkQRtQYemA2d7ddxtVHVQl5A==
@@ -2769,11 +2769,12 @@ hmac-drbg@^1.0.1:
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.1"
 
-hof@../hof:
-  version "21.0.1"
+hof@^20.5.0-notify-update-8.0-beta.1:
+  version "20.5.0-notify-update-8.0-beta.1"
+  resolved "https://registry.yarnpkg.com/hof/-/hof-20.5.0-notify-update-8.0-beta.1.tgz#c9ae8a90d3db35461126f5f980230425edb80835"
+  integrity sha512-kj2PNJH9xPlE6kcvO2QAJ8nId7qIhY/7sOkn4U7BU6SlFhDcQYFf5ERVaHM+dpkjVbpgLBcfsYyHJNfCsOYBUA==
   dependencies:
     aliasify "^2.1.0"
-    axios "^1.5.1"
     bluebird "^3.7.2"
     body-parser "^1.15.1"
     browserify "^17.0.0"
@@ -2790,7 +2791,7 @@ hof@../hof:
     duplexify "^3.5.0"
     express "^4.17.1"
     express-healthcheck "^0.1.0"
-    express-partial-templates "^0.2.1"
+    express-partial-templates "^0.2.0"
     express-session "^1.13.0"
     findup "^0.1.5"
     glob "^7.2.0"
@@ -2817,9 +2818,10 @@ hof@../hof:
     nodemailer-ses-transport "^1.5.1"
     nodemailer-smtp-transport "^2.7.4"
     nodemailer-stub-transport "^1.1.0"
-    notifications-node-client "^8.2.0"
+    notifications-node-client "^8.0.0"
     redis "^3.1.2"
     reqres "^3.0.1"
+    request "^2.79.0"
     rimraf "^3.0.2"
     sass "^1.56.2"
     serve-static "^1.14.1"
@@ -3895,7 +3897,7 @@ normalize-path@^3.0.0, normalize-path@~3.0.0:
   resolved "https://registry.yarnpkg.com/normalize-path/-/normalize-path-3.0.0.tgz#0dcd69ff23a1c9b11fd0978316644a0388216a65"
   integrity sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==
 
-notifications-node-client@^8.2.0:
+notifications-node-client@^8.0.0, notifications-node-client@^8.2.0:
   version "8.2.0"
   resolved "https://registry.yarnpkg.com/notifications-node-client/-/notifications-node-client-8.2.0.tgz#1fe0814a0b5e6732939ca91c34b11e5c1176605f"
   integrity sha512-XGmW2f2CroEwIUrPaTyShpF8pLlu79rBnwWns1uPGs27LbZdzNPJF1BzPl3cG3Tsu3nVlaWeXJJYAE+ALryalA==
@@ -4403,7 +4405,7 @@ reqres@^3.0.1:
     express "^4.17.1"
     sinon "^7.5.0"
 
-request@^2.88.2:
+request@^2.79.0, request@^2.88.2:
   version "2.88.2"
   resolved "https://registry.yarnpkg.com/request/-/request-2.88.2.tgz#d73c918731cb5a87da047e207234146f664d12b3"
   integrity sha512-MsvtOrfG9ZcrOwAW+Qi+F6HbD0CWXEh9ou77uOb7FM2WPhwT7smM833PzanhJLsgXjN89Ir6V2PczXNnMpwKhw==
