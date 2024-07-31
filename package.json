@@ -28,7 +28,7 @@
     "eslint-plugin-one-variable-per-var": "^0.0.3",
     "express": "^4.19.2",
     "express-partial-templates": "^0.2.1",
-    "hof": "^20.5.0-notify-update-8.0-beta.1",
+    "hof": "^21.0.12-upgrade-vuln-pkgs-beta",
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
