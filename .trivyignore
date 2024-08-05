@@ -1,3 +1,7 @@
 CVE-2024-5535
 # Reason: Will need to update when new patch is available
 # Expires: 2024-12-31
+CVE-2021-23358
+# Reason: The underscore pkg is required by express-partial-templates, fs-tree-traverse,
+# httpntlm in hof, none of these pkgs are required by filevault.
+# Expires: 2024-12-31

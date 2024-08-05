@@ -6,6 +6,7 @@ const router = express.Router();
 const multer = require('multer');
 const AWS = require('aws-sdk');
 const request = require('request');
+const Model = require('hof').model;
 const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
@@ -80,32 +81,44 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
-function clamAV(req, res, next) {
+async function clamAV(req, res, next) {
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
-  request.post({
-    url: config.get('clamRest.url'),
-    formData: fileData,
-    timeout: parseInt(config.get('timeout')) * 1000,
-    fileSize: parseInt(config.get('fileSize'))
-  }, (err, httpResponse, body) => {
-    if (err) {
-      logger.log('error', err);
-      err = {
-        code: 'VirusScanFailed'
-      };
-    } else if (body.indexOf('false') !== -1) {
+
+  try {
+
+    const params = {
+      method: 'POST',
+      url: config.get('clamRest.url'),
+      data: {
+        formData: fileData,
+        timeout: parseInt(config.get('timeout')) * 1000,
+        fileSize: parseInt(config.get('fileSize'))
+      }
+    };
+    const model = new Model();
+    const response =  await model._request(params);
+
+    const resBody = response.data;
+
+    if (resBody.indexOf('false') !== -1) {
       err = {
         code: 'VirusFound'
       };
+      return next(err);
     }
-
-    debug('no virus found');
-    next(err);
-  });
+    next();
+  }
+  catch (e) {
+    logger.log('error', err);
+    err = {
+      code: 'VirusScanFailed'
+    };
+    return next(err);
+  }
 }
 
 function s3Upload(req, res, next) {
