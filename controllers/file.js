@@ -89,7 +89,6 @@ async function clamAV(req, res, next) {
   };
 
   try {
-
     const params = {
       method: 'POST',
       url: config.get('clamRest.url'),
@@ -101,18 +100,18 @@ async function clamAV(req, res, next) {
     };
     const model = new Model();
     const response =  await model._request(params);
-
+    console.log("Post response: " + response);
     const resBody = response.data;
-
+    console.log("Post resBody : " + resBody);
     if (resBody.indexOf('false') !== -1) {
-      err = {
+      var err = {
         code: 'VirusFound'
       };
       return next(err);
     }
     next();
   }
-  catch (e) {
+  catch (err) {
     logger.log('error', err);
     err = {
       code: 'VirusScanFailed'
@@ -219,19 +218,26 @@ router.get('/:id', (req, res, next) => {
   params += `&X-Amz-Signature=${decyptedId}`;
   params += '&X-Amz-SignedHeaders=host';
 
-  request.get({
-    url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
-    encoding: null,
-    timeout: config.get('timeout') * 1000
-  }, (err, resp, buffer) => {
-    if (err) {
-      logger.log('error', err);
-      return next(err);
-    }
-    res.writeHead(resp.statusCode, resp.headers);
+  try {
+    const reqConf = {
+      method: 'Get',
+      url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
+      data: {
+        encoding: null,
+        timeout: config.get('timeout') * 1000
+      }
+    };
+    const model = new Model();
+    const response =   model._request(reqConf);
+    console.log("Get response: " + response);
+    res.writeHead(response.statusCode, response.headers);
     res.end(buffer);
-  });
-});
+
+  }
+  catch (err) {
+    logger.log('error', err);
+    return next(err);
+  }
 
 if (config.allowGenerateLinkRoute === 'yes') {
   router.get('/generate-link/:id', (req, res, next) => {
@@ -242,20 +248,31 @@ if (config.allowGenerateLinkRoute === 'yes') {
         Key: req.params.id,
         Expires: config.get('aws.expiry')
       }, (err, url) => {
-        request.get({
-          url,
-          encoding: null,
-          timeout: config.get('timeout') * 1000
-        }, (err, resp, buffer) => {
-          if (err) {
-            logger.log('error', err);
-            return next(err);
-          }
-          res.writeHead(resp.statusCode, resp.headers);
+        console.log("Get url: " + url);
+        try {
+          const reqConf = {
+            method: 'Get',
+            url: url,
+            data: {
+              encoding: null,
+              timeout: config.get('timeout') * 1000
+            }
+          };
+          const model = new Model();
+          const response =   model._request(reqConf);
+          console.log("Get response: " + response);
+          res.writeHead(response.statusCode, response.headers);
           res.end(buffer);
-        });
+
+        }
+        catch (err) {
+          logger.log('error', err);
+          return next(err);
+        }
       });
   });
 }
+})
+
 
 module.exports = router;
