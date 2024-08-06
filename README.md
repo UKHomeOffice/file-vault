@@ -1,6 +1,6 @@
 # File-vault a RESTful service to store and retrieve files
 
-File-vault is a simple REST service that allows POSTing a file to an S3 bucket. Upon a successful virus check the service will return with a URL that can be used to retrieve the file. 
+File-vault is a simple REST service that allows POSTing a file to an S3 bucket. Upon a successful virus check the service will return with a URL that can be used to retrieve the file.
 
 ## How this works
 Filevault simply adds or removes images/objects to an S3 bucket. It uses AWS Access Key IDs, Secret Access Keys and KMS Key IDs to do this which are supplied by ACP (or by the team in charge of creating them).
@@ -46,7 +46,7 @@ The following environment variables are used to configure file-vault.
   STORAGE_FILE_DESTINATION  | Temp directory for storing uploaded file (this is deleted on upload or fail and defaults to 'uploads')
   REQUEST_TIMEOUT           | Length of time (in seconds) for timeouts on http requests made by file-vault (when talking to clamAV and s3, defaults to 15s)
   FILE_EXTENSION_WHITELIST  | A comma separated list of file types that you want to white-list (defaults to everything). If the file is not in this list file-vault will respond with an error.
-  MAX_FILE_SIZE             | The maximum file size that Clam AV will scan (bytes). Default is 105 mb. 
+  MAX_FILE_SIZE             | The maximum file size that Clam AV will scan (bytes). Default is 105 mb.
 ```
 
 ## Tutorial
@@ -88,7 +88,7 @@ Now you should be able to access your bucket
 
 `aws s3 ls s3://<your-s3-bucket-name>`
 
-If your bucket is empty, this is not going to return anything.  
+If your bucket is empty, this is not going to return anything.
 
 #### Upload to AWS
 
@@ -123,7 +123,7 @@ You will need to create a client in keycloak.  You may need to ask your administ
 
 You will also need to create a role
 
-- Go to `Keycloak` -> `Roles` (located on the left) -> `Add role` 
+- Go to `Keycloak` -> `Roles` (located on the left) -> `Add role`
 - Call the role `caseworkers`
 
 #### Groups
@@ -131,7 +131,7 @@ You will also need to create a role
 You will also need to create a group
 
 - Go to `Keycloak` -> `Groups` (located on the left) -> `New`
-- Call the group something 
+- Call the group something
 - open the group -> role mappings -> assign roles as `caseworkers`
 
 #### Users
@@ -191,5 +191,3 @@ This will return a url something like
 ```
 
 Copy and paste the url into the browser.  You will need to log into office 365. Your file should be there
-
-
