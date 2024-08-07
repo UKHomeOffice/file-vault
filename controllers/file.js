@@ -5,7 +5,6 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const AWS = require('aws-sdk');
-const request = require('request');
 const Model = require('hof').model;
 const fs = require('fs');
 const onFinished = require('on-finished');
