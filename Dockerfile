@@ -1,4 +1,4 @@
-FROM node:18-alpine@sha256:2322b1bb3917b313f2e9308395aa5c39d51b91cc92a5d4d5be6d0451fcfb4d24
+FROM node:20-alpine@sha256:df01469346db2bf1cfc1f7261aeab86b2960efa840fe2bd46d83ff339f463665
 
 USER root
 

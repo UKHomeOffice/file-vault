@@ -139,7 +139,7 @@ function s3Upload(req, res, next) {
       };
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
-        Expires: 3600
+        Expires: parseInt(config.get('aws.expiry'))
       }));
     }
 
