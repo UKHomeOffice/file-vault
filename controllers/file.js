@@ -118,7 +118,6 @@ async function clamAV(req, res, next) {
     return next(err);
   }
 }
-
 function s3Upload(req, res, next) {
   debug('uploading to s3');
   const params = {
@@ -204,7 +203,7 @@ router.post('/', [
   }
 ]);
 
-router.get('/:id', (req, res, next) => {
+router.get('/:id', async(req, res, next) => {
   const reqId = req.query.id;
   const decyptedId = reqId.indexOf(':') > -1 ? decrypt(reqId) : decrypt_deprecated(reqId);
 
@@ -223,15 +222,15 @@ router.get('/:id', (req, res, next) => {
       url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
       data: {
         encoding: null,
-        timeout: parseInt(config.get('timeout')) * 1000
+        timeout: 3600,
       }
     };
     const model = new Model();
-    const response =   model._request(reqConf);
-    console.log("Get response: " + response);
-    res.writeHead(response.statusCode, response.headers);
-    res.end(buffer);
-
+    const response =  await model._request(reqConf);
+    res.writeHead(response.status, response.headers);
+    console.log("response.status: " + response.status);
+    res.end(response.data);
+    next();
   }
   catch (err) {
     logger.log('error', err);
