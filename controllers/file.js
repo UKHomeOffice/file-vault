@@ -223,7 +223,7 @@ router.get('/:id', (req, res, next) => {
       url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
       data: {
         encoding: null,
-        timeout: config.get('timeout') * 1000
+        timeout: parseInt(config.get('timeout')) * 1000
       }
     };
     const model = new Model();
@@ -254,7 +254,7 @@ if (config.allowGenerateLinkRoute === 'yes') {
             url: url,
             data: {
               encoding: null,
-              timeout: config.get('timeout') * 1000
+              timeout: parseInt(config.get('timeout')) * 1000,
             }
           };
           const model = new Model();
