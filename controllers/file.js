@@ -173,10 +173,35 @@ function decrypt_deprecated(text) {
   return dec;
 }
 
+async function getRequest(url, res, next) {
+  try {
+    const reqConf = {
+      method: 'Get',
+      url: url,
+      responseType: 'arraybuffer',
+      reponseEncoding: 'binary',
+      data: {
+        encoding: 'binary',
+        timeout: 3600,
+      }
+    };
+    const model = new Model();
+    const response =  await model._request(reqConf);
+    res.writeHead(response.status, response.headers);
+    res.end(response.data);
+    next();
+  }
+  catch (err) {
+    logger.log('error', err);
+    return next(err);
+  }
+}
+
 router.post('/', [
   upload.single('document'),
   checkExtension,
   deleteFileOnFinishedRequest,
+  clamAV,
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
@@ -216,60 +241,21 @@ router.get('/:id', async(req, res, next) => {
   params += `&X-Amz-Signature=${decyptedId}`;
   params += '&X-Amz-SignedHeaders=host';
 
-  try {
-    const reqConf = {
-      method: 'Get',
-      url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
-      data: {
-        encoding: null,
-        timeout: 3600,
-      }
-    };
-    const model = new Model();
-    const response =  await model._request(reqConf);
-    res.writeHead(response.status, response.headers);
-    console.log("response.status: " + response.status);
-    res.end(response.data);
-    next();
+  await getRequest(`https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`, res, next);
+
+  if (config.allowGenerateLinkRoute === 'yes') {
+    router.get('/generate-link/:id', (req, res, next) => {
+      debug('generating presign url from s3');
+
+      s3.getSignedUrl('getObject', {
+          Bucket: config.get('aws.bucket'),
+          Key: req.params.id,
+          Expires: config.get('aws.expiry')
+        }, async(err, url) => {
+           await getRequest(url, res, next);
+        });
+    });
   }
-  catch (err) {
-    logger.log('error', err);
-    return next(err);
-  }
-
-if (config.allowGenerateLinkRoute === 'yes') {
-  router.get('/generate-link/:id', (req, res, next) => {
-    debug('generating presign url from s3');
-
-    s3.getSignedUrl('getObject', {
-        Bucket: config.get('aws.bucket'),
-        Key: req.params.id,
-        Expires: config.get('aws.expiry')
-      }, (err, url) => {
-        console.log("Get url: " + url);
-        try {
-          const reqConf = {
-            method: 'Get',
-            url: url,
-            data: {
-              encoding: null,
-              timeout: parseInt(config.get('timeout')) * 1000,
-            }
-          };
-          const model = new Model();
-          const response =   model._request(reqConf);
-          console.log("Get response: " + response);
-          res.writeHead(response.statusCode, response.headers);
-          res.end(buffer);
-
-        }
-        catch (err) {
-          logger.log('error', err);
-          return next(err);
-        }
-      });
-  });
-}
 })
 
 
