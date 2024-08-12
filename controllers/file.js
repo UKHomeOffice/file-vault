@@ -12,7 +12,7 @@ const config = require('config');
 const path = require('path');
 const {URL} = require('url');
 const debug = require('debug')('file-vault');
-
+const FormData = require('form-data');
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
 const password = config.get('aws.password');
@@ -87,15 +87,16 @@ async function clamAV(req, res, next) {
     file: fs.createReadStream(req.file.path)
   };
 
+  const formData = new FormData();
+  formData.append('file', fileData.name, fileData.file);
   try {
     const params = {
       method: 'POST',
       url: config.get('clamRest.url'),
-      data: {
-        formData: fileData,
-        timeout: parseInt(config.get('timeout')) * 1000,
-        fileSize: parseInt(config.get('fileSize'))
-      }
+      data: formData,
+      timeout: parseInt(config.get('timeout')) * 1000,
+      fileSize: parseInt(config.get('fileSize')),
+      headers: {...formData.getHeaders()}
     };
     const model = new Model();
     const response =  await model._request(params);
