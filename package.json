@@ -6,7 +6,7 @@
     "url": "https://github.com/UKHomeOffice/file-vault"
   },
   "engines": {
-    "node": ">=18.12.1"
+    "node": ">=20.16.0 <21.0.0"
   },
   "description": "Allows POST and GET to a configured s3 bucket.",
   "main": "index.js",
@@ -23,9 +23,6 @@
     "aws-sdk": "^2.1664.0",
     "config": "^3.3.12",
     "debug": "^4.3.6",
-    "eslint-config-hof": "^1.3.4",
-    "eslint-plugin-filenames": "^1.3.2",
-    "eslint-plugin-one-variable-per-var": "^0.0.3",
     "express": "^4.19.2",
     "express-partial-templates": "^0.2.1",
     "hof": "^21.0.12-upgrade-vuln-pkgs-beta",
@@ -42,6 +39,9 @@
   "devDependencies": {
     "dotenv": "^16.4.5",
     "eslint": "^7.32.0",
+    "eslint-config-hof": "^1.3.4",
+    "eslint-plugin-filenames": "^1.3.2",
+    "eslint-plugin-one-variable-per-var": "^0.0.3",
     "mocha": "^10.7.0",
     "nock": "^13.5.4",
     "nodemon": "^3.1.4",
