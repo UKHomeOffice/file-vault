@@ -3,13 +3,16 @@ kind: pipeline
 name: default
 type: kubernetes
 
+environment:
+  IMAGE_URL: quay.io/ukhomeofficedigital
+  IMAGE_REPO: file-vault
+
 steps:
 - name: build
   pull: if-not-exists
-  image: node:14
+  image: node:20
   commands:
   - yarn install --frozen-lockfile
-  - yarn run test
   when:
     branch: master
     event: [ push, pull_request ]
@@ -19,7 +22,7 @@ steps:
   image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
   commands:
   - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-  - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
+  - docker build --no-cache -t $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} .
   when:
     branch: master
     event: [ push, pull_request ]
@@ -33,11 +36,47 @@ steps:
   commands:
   - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
   - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
-  - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-  - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+  - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
+  - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
   when:
     branch: master
     event: [ push, pull_request ]
+
+# #Trivy for base image
+- name: scan_image_os
+  pull: always
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+  resources:
+    limits:
+      cpu: 1000
+      memory: 1024Mi
+  environment:
+    IMAGE_NAME: node:20-alpine@sha256:df01469346db2bf1cfc1f7261aeab86b2960efa840fe2bd46d83ff339f463665
+    SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+    FAIL_ON_DETECTION: false
+    IGNORE_UNFIXED: false
+    ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
+  when:
+    branch: master
+    event: [ push, pull_request, tag ]
+
+ # Trivy Security Scannner
+- name: scan_packages
+  pull: always
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+  resources:
+    limits:
+      cpu: 1000
+      memory: 1024Mi
+  environment:
+    IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}
+    SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+    FAIL_ON_DETECTION: false
+    IGNORE_UNFIXED: false
+    ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
+  when:
+    branch: master
+    event: [ push, pull_request, tag ]
 
 services:
   - name: docker
