@@ -42,24 +42,6 @@ steps:
     branch: master
     event: [ push, pull_request ]
 
- # Trivy Security Scannner
-- name: scan_packages
-  pull: always
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
-  resources:
-    limits:
-      cpu: 1000
-      memory: 1024Mi
-  environment:
-    IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}
-    SEVERITY: MEDIUM,HIGH,CRITICAL
-    FAIL_ON_DETECTION: false
-    IGNORE_UNFIXED: true
-# ALLOW_CVE_LIST_FILE: hof-services-config/file-vault/trivy-cve-exceptions.txt
-  when:
-    branch: master
-    event: [ push, pull_request, tag ]
-
 # #Trivy for base image
 - name: scan_image_os
   pull: always
@@ -70,10 +52,28 @@ steps:
       memory: 1024Mi
   environment:
     IMAGE_NAME: node:20-alpine@sha256:df01469346db2bf1cfc1f7261aeab86b2960efa840fe2bd46d83ff339f463665
-    SEVERITY: MEDIUM,HIGH,CRITICAL
+    SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
     FAIL_ON_DETECTION: false
-    IGNORE_UNFIXED: true
-    # ALLOW_CVE_LIST_FILE: hof-services-config/file-vault/trivy-cve-exceptions.txt
+    IGNORE_UNFIXED: false
+    ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
+  when:
+    branch: master
+    event: [ push, pull_request, tag ]
+
+ # Trivy Security Scannner
+- name: scan_packages
+  pull: always
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+  resources:
+    limits:
+      cpu: 1000
+      memory: 1024Mi
+  environment:
+    IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}
+    SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+    FAIL_ON_DETECTION: false
+    IGNORE_UNFIXED: false
+    ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
   when:
     branch: master
     event: [ push, pull_request, tag ]

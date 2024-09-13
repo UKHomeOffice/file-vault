@@ -2,7 +2,7 @@ FROM node:20-alpine@sha256:2d07db07a2df6830718ae2a47db6fedce6745f5bcd174c398f2ac
 
 USER root
 
-# Update packages as a result of Anchore security vulnerability checks
+# Update packages as a result of Trivy security vulnerability checks
 RUN apk update && \
     apk add --upgrade gnutls binutils nodejs apk-tools libjpeg-turbo libcurl libx11 libxml2  libcrypto3 libssl3
 
