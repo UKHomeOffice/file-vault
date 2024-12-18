@@ -7,6 +7,9 @@ const _ = require('lodash');
 const app = express();
 const config = require('config');
 const logger = require('./logger');
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
 
 morgan.token('id', req => _.get(req, 'session.id', 'filevault'));
 
@@ -33,9 +36,23 @@ app.use((err, req, res, next) => {
 });
 
 module.exports.start = () => {
-  app.listen(config.get('port'), () => {
-    logger.info(`Server started on port ${config.get('port')}`);
+  const httpServer = http.createServer(app);
+
+  httpServer.listen(config.get('port'));
+
+  if (config.get('https_port')) {
+  const privateKey = fs.readFileSync('/certs/tls.key', 'utf8');
+  const certificate = fs.readFileSync('/certs/tls.crt', 'utf8');
+  const credentials = { key: privateKey, cert: certificate };
+
+  const httpsServer = https.createServer(credentials, app);
+  httpsServer.listen(config.get('https_port'), () => {
+    logger.info(`Server started on port ${config.get('https_port')}`);
   });
+}
+  // app.listen(config.get('port'), () => {
+  //   logger.info(`Server started on port ${config.get('port')}`);
+  // });
 };
 
 module.exports.app = app;
