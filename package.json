@@ -28,7 +28,7 @@
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "multer": "^1.2.1",
-    "on-finished": "^2.3.0",
+    "on-finished": "^2.4.1",
     "request": "^2.79.0"
   },
   "devDependencies": {
