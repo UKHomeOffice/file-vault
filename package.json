@@ -1,12 +1,12 @@
 {
   "name": "file-vault",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/UKHomeOffice/file-vault"
   },
   "engines": {
-    "node": ">=14.15.0"
+    "node": ">=20.19.0"
   },
   "description": "Allows POST and GET to a configured s3 bucket.",
   "main": "index.js",
