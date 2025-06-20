@@ -11,7 +11,7 @@ steps:
   - yarn install --frozen-lockfile
   when:
     branch: master
-    event: [ push, pull_request ]
+    event: [ push, pull_request, tag ]
 
 - name: build_file-vault
   pull: if-not-exists
@@ -21,7 +21,7 @@ steps:
   - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
   when:
     branch: master
-    event: [ push, pull_request ]
+    event: [ push, pull_request, tag ]
 
 - name: image_to_quay
   pull: if-not-exists
@@ -36,7 +36,7 @@ steps:
   - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
   when:
     branch: master
-    event: [ push, pull_request ]
+    event: [ push, pull_request, tag ]
 
 services:
   - name: docker
