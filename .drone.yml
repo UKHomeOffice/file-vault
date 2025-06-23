@@ -57,30 +57,30 @@ steps:
       event: [push, pull_request, tag]
 
 
-- name: build_image
-  pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-  commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-  - docker build -t $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} .
-  when:
-    branch: master
-    event: [ push, pull_request, tag ]
+  - name: build_image
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    commands:
+    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+    - docker build -t $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} .
+    when:
+      branch: master
+      event: [ push, pull_request, tag ]
 
-- name: image_to_quay
-  pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-  environment:
-    DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
-  commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-  - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
-  - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
-  - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
-  when:
-    branch: master
-    event: [ push, pull_request, tag ]
+  - name: image_to_quay
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    environment:
+      DOCKER_PASSWORD:
+        from_secret: DOCKER_PASSWORD
+    commands:
+    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+    - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
+    - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
+    - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
+    when:
+      branch: master
+      event: [ push, pull_request, tag ]
 
   # Trivy Security Scannner for scanning nodejs packages in Yarn
   - name: scan_node_packages
