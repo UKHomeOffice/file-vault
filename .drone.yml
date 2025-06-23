@@ -10,8 +10,8 @@ node_image: &node_image
 environment:
   IMAGE_URL: quay.io/ukhomeofficedigital
   IMAGE_REPO: file-vault
-steps:
 
+steps:
   - name: clone_repos
     image: alpine/git
     environment:
@@ -55,6 +55,7 @@ steps:
         path: /root/.dockersock
     when:
       event: [push, pull_request, tag]
+
 
 - name: build_image
   pull: if-not-exists
@@ -107,5 +108,9 @@ steps:
 services:
   - name: docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+
+volumes:
+  - name: dockersock
+    temp: {}
 
 ...
