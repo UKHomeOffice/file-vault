@@ -5,10 +5,7 @@ USER root
 RUN apk update && apk upgrade --no-cache
 
 # Fixes ajv, shelljs, tough-cookie vulnerabilities in package.json in the final image by installing latest version.
-RUN npm install -g npm@latest \
-    && npm install ajv --save \
-    && npm install shelljs --save \
-    && npm install tough-cookie --save
+RUN yarn upgrade
 
 # Setup nodejs group & nodejs user
 RUN addgroup --system nodejs --gid 998 && \

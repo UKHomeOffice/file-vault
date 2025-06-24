@@ -84,7 +84,7 @@ steps:
       ALLOW_CVE_LIST_FILE: cve-exceptions.txt
     commands:
       - trivy image --severity MEDIUM,HIGH,CRITICAL --dependency-tree --scanners vuln --ignorefile $${ALLOW_CVE_LIST_FILE} $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
-      - trivy repo --branch ${DRONE_SOURCE_BRANCH} --severity MEDIUM,HIGH,CRITICAL --dependency-tree --scanners vuln --ignorefile $${ALLOW_CVE_LIST_FILE} https://github.com/UKHomeOffice/hof-rds-api
+      - trivy repo --branch ${DRONE_SOURCE_BRANCH} --severity MEDIUM,HIGH,CRITICAL --dependency-tree --scanners vuln --ignorefile $${ALLOW_CVE_LIST_FILE} https://github.com/UKHomeOffice/file-vault
     volumes:
       - name: dockersock
         path: /var/run 
