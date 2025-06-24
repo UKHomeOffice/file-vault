@@ -77,6 +77,8 @@ steps:
     when:
       branch: master
       event: [ push, pull_request, tag ]
+    depends_on:
+      - build_file-vault
 
   - name: scan_node_packages
     pull: always
