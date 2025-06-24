@@ -5,14 +5,14 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const AWS = require('aws-sdk');
-const request = require('request');
+const Model = require('hof').model;
 const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
 const path = require('path');
 const {URL} = require('url');
 const debug = require('debug')('file-vault');
-
+const FormData = require('form-data');
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
 const password = config.get('aws.password');
@@ -80,40 +80,45 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
-function clamAV(req, res, next) {
+async function clamAV(req, res, next) {
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
-  request.post({
-    url: config.get('clamRest.url'),
-    formData: fileData,
-    timeout: parseInt(config.get('timeout')) * 1000,
-    fileSize: parseInt(config.get('fileSize'))
-  }, (err, httpResponse, body) => {
-    if (err) {
-      logger.log('error', err);
-      err = {
-        code: 'VirusScanFailed'
-      };
-    }
-    else if (httpResponse && httpResponse.statusCode >= 400 ){
-      err = {
-        code: 'VirusScanFailed'
-      };
-    }
-    else if (body.indexOf('false') !== -1) {
-      err = {
+
+  const formData = new FormData();
+  formData.append('file', fileData.name, fileData.file);
+  try {
+    const params = {
+      method: 'POST',
+      url: config.get('clamRest.url'),
+      data: formData,
+      timeout: parseInt(config.get('timeout')) * 1000,
+      fileSize: parseInt(config.get('fileSize')),
+      headers: {...formData.getHeaders()}
+    };
+    const model = new Model();
+    const response =  await model._request(params);
+    console.log("Post response: " + response);
+    const resBody = response.data;
+    console.log("Post resBody : " + resBody);
+    if (resBody.indexOf('false') !== -1) {
+      var err = {
         code: 'VirusFound'
       };
+      return next(err);
     }
-
-    debug('no virus found');
-    next(err);
-  });
+    next();
+  }
+  catch (err) {
+    logger.log('error', err);
+    err = {
+      code: 'VirusScanFailed'
+    };
+    return next(err);
+  }
 }
-
 function s3Upload(req, res, next) {
   debug('uploading to s3');
   const params = {
@@ -134,7 +139,7 @@ function s3Upload(req, res, next) {
       };
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
-        Expires: config.get('aws.expiry')
+        Expires: parseInt(config.get('aws.expiry'))
       }));
     }
 
@@ -169,6 +174,30 @@ function decrypt_deprecated(text) {
   return dec;
 }
 
+async function getRequest(url, res, next) {
+  try {
+    const reqConf = {
+      method: 'Get',
+      url: url,
+      responseType: 'arraybuffer',
+      reponseEncoding: 'binary',
+      data: {
+        encoding: 'binary',
+        timeout: 3600,
+      }
+    };
+    const model = new Model();
+    const response =  await model._request(reqConf);
+    res.writeHead(response.status, response.headers);
+    res.end(response.data);
+    next();
+  }
+  catch (err) {
+    logger.log('error', err);
+    return next(err);
+  }
+}
+
 router.post('/', [
   upload.single('document'),
   checkExtension,
@@ -200,7 +229,7 @@ router.post('/', [
   }
 ]);
 
-router.get('/:id', (req, res, next) => {
+router.get('/:id', async(req, res, next) => {
   const reqId = req.query.id;
   const decyptedId = reqId.indexOf(':') > -1 ? decrypt(reqId) : decrypt_deprecated(reqId);
 
@@ -213,43 +242,22 @@ router.get('/:id', (req, res, next) => {
   params += `&X-Amz-Signature=${decyptedId}`;
   params += '&X-Amz-SignedHeaders=host';
 
-  request.get({
-    url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
-    encoding: null,
-    timeout: config.get('timeout') * 1000
-  }, (err, resp, buffer) => {
-    if (err) {
-      logger.log('error', err);
-      return next(err);
-    }
-    res.writeHead(resp.statusCode, resp.headers);
-    res.end(buffer);
-  });
-});
+  await getRequest(`https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`, res, next);
 
-if (config.allowGenerateLinkRoute === 'yes') {
-  router.get('/generate-link/:id', (req, res, next) => {
-    debug('generating presign url from s3');
+  if (config.allowGenerateLinkRoute === 'yes') {
+    router.get('/generate-link/:id', (req, res, next) => {
+      debug('generating presign url from s3');
 
-    s3.getSignedUrl('getObject', {
-        Bucket: config.get('aws.bucket'),
-        Key: req.params.id,
-        Expires: config.get('aws.expiry')
-      }, (err, url) => {
-        request.get({
-          url,
-          encoding: null,
-          timeout: config.get('timeout') * 1000
-        }, (err, resp, buffer) => {
-          if (err) {
-            logger.log('error', err);
-            return next(err);
-          }
-          res.writeHead(resp.statusCode, resp.headers);
-          res.end(buffer);
+      s3.getSignedUrl('getObject', {
+          Bucket: config.get('aws.bucket'),
+          Key: req.params.id,
+          Expires: config.get('aws.expiry')
+        }, async(err, url) => {
+           await getRequest(url, res, next);
         });
-      });
-  });
-}
+    });
+  }
+})
+
 
 module.exports = router;

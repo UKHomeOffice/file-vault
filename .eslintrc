@@ -1,11 +1,9 @@
-extends:
-- "homeoffice/config/default"
+{
+  "parserOptions": {
+      "ecmaVersion": 12
+  },
 
-env:
-  es6: true
-
-globals:
-  URL: true
-
-rules:
-  consistent-return: off
+  "env": {
+      "es6": true
+  }
+}
