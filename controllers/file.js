@@ -5,14 +5,14 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const AWS = require('aws-sdk');
-const request = require('request');
+const Model = require('hof').model;
 const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
 const path = require('path');
-const {URL} = require('url');
+const { URL } = require('url');
 const debug = require('debug')('file-vault');
-
+const FormData = require('form-data');
 const crypto = require('crypto');
 const algorithm = 'aes-256-ctr';
 const password = config.get('aws.password');
@@ -80,38 +80,42 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
-function clamAV(req, res, next) {
+async function clamAV(req, res, next) {
   debug('checking for virus');
   let fileData = {
     name: req.file.originalname,
     file: fs.createReadStream(req.file.path)
   };
-  request.post({
-    url: config.get('clamRest.url'),
-    formData: fileData,
-    timeout: parseInt(config.get('timeout')) * 1000,
-    fileSize: parseInt(config.get('fileSize'))
-  }, (err, httpResponse, body) => {
-    if (err) {
-      logger.log('error', err);
-      err = {
-        code: 'VirusScanFailed'
-      };
-    }
-    else if (httpResponse && httpResponse.statusCode >= 400 ){
-      err = {
-        code: 'VirusScanFailed'
-      };
-    }
-    else if (body.indexOf('false') !== -1) {
-      err = {
+
+  const formData = new FormData();
+  formData.append('file', fileData.name, fileData.file);
+  try {
+    const params = {
+      method: 'POST',
+      url: config.get('clamRest.url'),
+      data: formData,
+      timeout: parseInt(config.get('timeout')) * 1000,
+      fileSize: parseInt(config.get('fileSize')),
+      headers: { ...formData.getHeaders() }
+    };
+    const model = new Model();
+    const response = await model._request(params);
+    const resBody = response.data;
+    if (resBody.indexOf('false') !== -1) {
+      let err = {
         code: 'VirusFound'
       };
+      return next(err);
     }
-
-    debug('no virus found');
-    next(err);
-  });
+    return next();
+  }
+  catch (err) {
+    logger.log('error', err);
+    err = {
+      code: 'VirusScanFailed'
+    };
+    return next(err);
+  }
 }
 
 function s3Upload(req, res, next) {
@@ -134,7 +138,7 @@ function s3Upload(req, res, next) {
       };
     } else {
       req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
-        Expires: config.get('aws.expiry')
+        Expires: parseInt(config.get('aws.expiry'))
       }));
     }
 
@@ -145,21 +149,21 @@ function s3Upload(req, res, next) {
 // Following this example
 // https://stackoverflow.com/questions/60369148/how-do-i-replace-deprecated-crypto-createcipher-in-node-js
 function encrypt(text) {
-    let iv = crypto.randomBytes(IV_LENGTH);
-    let cipher = crypto.createCipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-    let encrypted = cipher.update(text);
-    encrypted = Buffer.concat([encrypted, cipher.final()]);
-    return iv.toString('hex') + ':' + encrypted.toString('hex');
+  let iv = crypto.randomBytes(IV_LENGTH);
+  let cipher = crypto.createCipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+  let encrypted = cipher.update(text);
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
 function decrypt(text) {
-    let textParts = text.split(':');
-    let iv = Buffer.from(textParts.shift(), 'hex');
-    let encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    let decipher = crypto.createDecipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
+  let textParts = text.split(':');
+  let iv = Buffer.from(textParts.shift(), 'hex');
+  let encryptedText = Buffer.from(textParts.join(':'), 'hex');
+  let decipher = crypto.createDecipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString();
 }
 
 function decrypt_deprecated(text) {
@@ -167,6 +171,29 @@ function decrypt_deprecated(text) {
   let dec = decipher.update(text, 'hex', 'utf8');
   dec += decipher.final('utf8');
   return dec;
+}
+
+async function getRequest(url, res, next) {
+  try {
+    const reqConf = {
+      method: 'GET',
+      url: url,
+      responseType: 'arraybuffer',
+      reponseEncoding: 'binary',
+      data: {
+        encoding: 'binary',
+        timeout: config.get('timeout') * 1000,
+      }
+    };
+    const model = new Model();
+    const response = await model._request(reqConf);
+    res.writeHead(response.status, response.headers);
+    res.end(response.data);
+  }
+  catch (err) {
+    logger.log('error', err);
+    return next(err);
+  }
 }
 
 router.post('/', [
@@ -200,7 +227,7 @@ router.post('/', [
   }
 ]);
 
-router.get('/:id', (req, res, next) => {
+router.get('/:id', async (req, res, next) => {
   const reqId = req.query.id;
   const decyptedId = reqId.indexOf(':') > -1 ? decrypt(reqId) : decrypt_deprecated(reqId);
 
@@ -209,46 +236,26 @@ router.get('/:id', (req, res, next) => {
   params += `%2F${req.query.date.split('T')[0]}`;
   params += `%2F${config.get('aws.region')}%2Fs3%2Faws4_request`;
   params += `&X-Amz-Date=${req.query.date}`;
-  params += `&X-Amz-Expires=${config.get('aws.expiry')}`;
+  params += `&X-Amz-Expires=${parseInt(config.get('aws.expiry'))}`;
   params += `&X-Amz-Signature=${decyptedId}`;
   params += '&X-Amz-SignedHeaders=host';
 
-  request.get({
-    url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
-    encoding: null,
-    timeout: config.get('timeout') * 1000
-  }, (err, resp, buffer) => {
-    if (err) {
-      logger.log('error', err);
-      return next(err);
-    }
-    res.writeHead(resp.statusCode, resp.headers);
-    res.end(buffer);
-  });
-});
+  logger.log('info', 'getting file-vault url');
+  await getRequest(`https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`, res, next);
+})
 
 if (config.allowGenerateLinkRoute === 'yes') {
   router.get('/generate-link/:id', (req, res, next) => {
     debug('generating presign url from s3');
 
     s3.getSignedUrl('getObject', {
-        Bucket: config.get('aws.bucket'),
-        Key: req.params.id,
-        Expires: config.get('aws.expiry')
-      }, (err, url) => {
-        request.get({
-          url,
-          encoding: null,
-          timeout: config.get('timeout') * 1000
-        }, (err, resp, buffer) => {
-          if (err) {
-            logger.log('error', err);
-            return next(err);
-          }
-          res.writeHead(resp.statusCode, resp.headers);
-          res.end(buffer);
-        });
-      });
+      Bucket: config.get('aws.bucket'),
+      Key: req.params.id,
+      Expires: parseInt(config.get('aws.expiry'))
+    }, async (err, url) => {
+      logger.log('info', 'getting generated file-vault url');
+      await getRequest(url, res, next);
+    });
   });
 }
 

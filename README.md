@@ -1,6 +1,6 @@
 # File-vault a RESTful service to store and retrieve files
 
-File-vault is a simple REST service that allows POSTing a file to an S3 bucket. Upon a successful virus check the service will return with a URL that can be used to retrieve the file. 
+File-vault is a simple REST service that allows POSTing a file to an S3 bucket. Upon a successful virus check the service will return with a URL that can be used to retrieve the file.
 
 ## How this works
 Filevault simply adds or removes images/objects to an S3 bucket. It uses AWS Access Key IDs, Secret Access Keys and KMS Key IDs to do this which are supplied by ACP (or by the team in charge of creating them).
@@ -46,7 +46,7 @@ The following environment variables are used to configure file-vault.
   STORAGE_FILE_DESTINATION  | Temp directory for storing uploaded file (this is deleted on upload or fail and defaults to 'uploads')
   REQUEST_TIMEOUT           | Length of time (in seconds) for timeouts on http requests made by file-vault (when talking to clamAV and s3, defaults to 15s)
   FILE_EXTENSION_WHITELIST  | A comma separated list of file types that you want to white-list (defaults to everything). If the file is not in this list file-vault will respond with an error.
-  MAX_FILE_SIZE             | The maximum file size that Clam AV will scan (bytes). Default is 105 mb. 
+  MAX_FILE_SIZE             | The maximum file size that Clam AV will scan (bytes). Default is 105 mb.
 ```
 
 ## Tutorial
@@ -88,7 +88,7 @@ Now you should be able to access your bucket
 
 `aws s3 ls s3://<your-s3-bucket-name>`
 
-If your bucket is empty, this is not going to return anything.  
+If your bucket is empty, this is not going to return anything.
 
 #### Upload to AWS
 
@@ -123,7 +123,7 @@ You will need to create a client in keycloak.  You may need to ask your administ
 
 You will also need to create a role
 
-- Go to `Keycloak` -> `Roles` (located on the left) -> `Add role` 
+- Go to `Keycloak` -> `Roles` (located on the left) -> `Add role`
 - Call the role `caseworkers`
 
 #### Groups
@@ -131,7 +131,7 @@ You will also need to create a role
 You will also need to create a group
 
 - Go to `Keycloak` -> `Groups` (located on the left) -> `New`
-- Call the group something 
+- Call the group something
 - open the group -> role mappings -> assign roles as `caseworkers`
 
 #### Users
@@ -192,4 +192,86 @@ This will return a url something like
 
 Copy and paste the url into the browser.  You will need to log into office 365. Your file should be there
 
+## Git Tags and Release Workflow
 
+This repository uses Git tags to trigger the release pipeline, build container images, and push them to the Quay.io container registry.
+
+#### Workflow Overview
+
+Developers push a Git tag following Semantic Versioning (e.g., 1.0.0).
+
+The Drone CI pipeline is automatically triggered only when the tag is pushed from the master branch.
+
+A Docker image is built and pushed to Quay.io.
+
+The image is tagged with:
+
+the semantic version (e.g., 1.0.0)
+
+a content-addressable digest (@sha256:...)
+
+The complete image reference can be used in the format:
+**quay.io/yourorg/your-image:1.0.0@sha256:<digest>**
+
+**Tagging for Releases**
+
+To release a new version, follow these steps on the master branch only:
+
+**Make sure you're on the master branch**
+
+git checkout master
+
+**Create and push a semantic version tag**
+
+git tag 1.2.3
+git push origin 1.2.3
+
+**Alternatively,** We can create Tags from Git Hosting UI instead of CLI commands
+
+We can also create tags directly from Git hosting provider’s web interface e.g., GitHub
+
+Go to the Releases or Tags section of the repository
+
+Click "Create a new release" or "Add tag"
+
+Use the proper version format (e.g., 1.2.3) and make sure it points to the master branch
+
+This is a convenient way for team members to trigger a release without using the command line.
+
+
+###  Release Tagging Guidelines for Contributors
+
+When creating a new Git tag (either via CLI or Git UI), please follow these practices to ensure clear, traceable, and production-ready releases:
+
+Attach release notes or changelogs to a tag
+
+Link to issues, PRs, and milestones
+
+Create pre-releases for testing before full deployment
+
+This turns a simple tag into a full-fledged release artifact.
+
+
+**Important:**
+
+Use valid Semantic Versioning format: v<MAJOR>.<MINOR>.<PATCH> (e.g., 1.0.0, 2.3.1)
+
+The Drone CI pipeline is configured to only trigger on tags created from the master branch.
+
+#### Reason for Usage of image:tag@digest
+
+The format image:tag@digest combines:
+
+Tag (human-readable version, like 1.2.3)
+
+Digest (immutable SHA-256 content identifier)
+
+The digest SHA (sha256:<digest>) is a cryptographic hash that uniquely identifies the image content. You can retrieve it from Quay.io after the image is pushed:
+
+**This guarantees:**
+
+'Consistency' – The image always resolves to the same content.
+
+'Traceability' – You can trace exactly which build and source it came from.
+
+'Security' – Prevents tampering or tag overwriting in registries.
