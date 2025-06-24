@@ -12,20 +12,6 @@ environment:
   IMAGE_REPO: file-vault
 
 steps:
-  - name: clone_repos
-    image: alpine/git
-    environment:
-      DRONE_GIT_USERNAME:
-        from_secret: drone_git_username
-      DRONE_GIT_TOKEN:
-        from_secret: drone_git_token
-    commands:
-      - git clone https://$${DRONE_GIT_USERNAME}:$${DRONE_GIT_TOKEN}@github.com/UKHomeOfficeForms/hof-services-config.git
-    when:
-      branch:
-        include:
-        - master
-      event: [push, pull_request, tag]
 
   - name: setup
     <<: *node_image
@@ -49,7 +35,7 @@ steps:
       SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
       FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: false
-      ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
+      ALLOW_CVE_LIST_FILE: cve-exceptions.txt
     volumes:
       - name: dockersock
         path: /root/.dockersock
@@ -95,7 +81,7 @@ steps:
       SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
       FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: false
-      ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
+      ALLOW_CVE_LIST_FILE: cve-exceptions.txt
     commands:
       - trivy image --severity MEDIUM,HIGH,CRITICAL --dependency-tree --scanners vuln --ignorefile $${ALLOW_CVE_LIST_FILE} $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
       - trivy repo --branch ${DRONE_SOURCE_BRANCH} --severity MEDIUM,HIGH,CRITICAL --dependency-tree --scanners vuln --ignorefile $${ALLOW_CVE_LIST_FILE} https://github.com/UKHomeOffice/hof-rds-api
