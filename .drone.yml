@@ -100,7 +100,7 @@ steps:
     when:
       event: [push, pull_request]
     depends_on:
-      - build_file-vault
+      - image_to_quay
 
 services:
   - name: docker
