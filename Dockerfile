@@ -4,6 +4,12 @@ USER root
 # Update packages as a result of Trivy security vulnerability checks
 RUN apk update && apk upgrade --no-cache
 
+# Fixes ajv, shelljs, tough-cookie vulnerabilities in package.json in the final image by installing latest version.
+RUN npm install -g npm@latest \
+    && npm install ajv --save
+    && npm install shelljs --save
+    && npm install tough-cookie --save
+
 # Setup nodejs group & nodejs user
 RUN addgroup --system nodejs --gid 998 && \
     adduser --system nodejs --uid 999 --home /app/ && \
