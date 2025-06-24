@@ -77,7 +77,7 @@ steps:
     commands:
     - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
     - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
-    - docker tag file-vault:$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
+    - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
     - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
     when:
       branch: master
@@ -93,7 +93,7 @@ steps:
         cpu: 1000
         memory: 1024Mi
     environment:
-      IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}
+      IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
       SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
       FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: false
