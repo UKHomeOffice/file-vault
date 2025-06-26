@@ -212,7 +212,7 @@ router.get('/:id', (req, res, next) => {
   params += `&X-Amz-Expires=${config.get('aws.expiry')}`;
   params += `&X-Amz-Signature=${decyptedId}`;
   params += '&X-Amz-SignedHeaders=host';
-
+  logger.log('info', 'getting file-vault url');
   request.get({
     url: `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`,
     encoding: null,
@@ -236,6 +236,7 @@ if (config.allowGenerateLinkRoute === 'yes') {
         Key: req.params.id,
         Expires: config.get('aws.expiry')
       }, (err, url) => {
+        logger.log('info', 'getting generated file-vault url');
         request.get({
           url,
           encoding: null,
