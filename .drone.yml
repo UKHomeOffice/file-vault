@@ -3,43 +3,155 @@ kind: pipeline
 name: default
 type: kubernetes
 
-steps:
-- name: build
+environment:
+  IMAGE_URL: quay.io/ukhomeofficedigital
+  IMAGE_REPO: file-vault
+
+include_default_branch: &include_default_branch
+  include:
+    - master
+
+include_default_and_feature_branches: &include_default_and_feature_branches
+  include:
+    - master
+    - feature/*
+
+node_image: &node_image
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/hof-nodejs:20.19.0-alpine3.21@sha256:aad584fa26cb2838739527166c8965d95d0d2d9b88cfd5e3e2d3b8647ae03101
-  commands:
-  - yarn install --frozen-lockfile
-  when:
-    branch: master
-    event: [ push, pull_request, tag ]
 
-- name: build_file-vault
-  pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+linting: &linting
+  <<: *node_image
   commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-  - docker build -t file-vault-$${DRONE_COMMIT_SHA} .
-  when:
-    branch: master
-    event: [ push, pull_request, tag ]
+    - yarn run test:lint
 
-- name: image_to_quay
-  pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+unit_tests: &unit_tests
+  <<: *node_image
   environment:
-    DOCKER_PASSWORD:
-      from_secret: DOCKER_PASSWORD
+    NOTIFY_STUB: true
   commands:
-  - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-  - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
-  - docker tag file-vault-$${DRONE_COMMIT_SHA} quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-  - docker push quay.io/ukhomeofficedigital/file-vault:$${DRONE_COMMIT_SHA}
-  when:
-    branch: master
-    event: [ push, pull_request, tag ]
+    - yarn run test:unit
+
+trigger:
+  branch:
+    <<: *include_default_and_feature_branches
+
+steps:
+  - name: setup
+    <<: *node_image
+    commands:
+      - yarn install --frozen-lockfile
+    when:
+      branch: master
+      event: [ push, pull_request, tag ]
+
+    # Trivy Security Scannner for scanning OS related vulnerabilities in Base image of Dockerfile
+  - name: scan_base_image_os
+    pull: always
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+    resources:
+      limits:
+        cpu: 1000
+        memory: 1024Mi
+    environment:
+      IMAGE_NAME: quay.io/ukhomeofficedigital/hof-nodejs:20.19.0-alpine3.21@sha256:aad584fa26cb2838739527166c8965d95d0d2d9b88cfd5e3e2d3b8647ae03101
+      SERVICE_URL: https://acp-trivy-helm.acp-trivy.svc.cluster.local:443
+      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+      FAIL_ON_DETECTION: false
+      IGNORE_UNFIXED: false
+    volumes:
+      - name: dockersock
+        path: /root/.dockersock
+    when:
+      event: [push, pull_request, tag]
+
+  - name: linting
+    <<: *linting
+    when:
+      branch:
+        <<: *include_default_and_feature_branches
+      event: [push, pull_request]
+    depends_on:
+      - setup
+
+  - name: unit_tests
+    <<: *unit_tests
+    when:
+      branch:
+        <<: *include_default_and_feature_branches
+      event: [push, pull_request]
+    depends_on:
+      - setup
+
+  - name: build_image
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    commands:
+    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+    - docker build --no-cache -t  $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} .
+    volumes:
+      - name: dockersock
+        path: /var/run
+    when:
+      branch: master
+      event: [ push, pull_request, tag ]
+    depends_on:
+      - setup
+
+  - name: image_to_quay
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    environment:
+      DOCKER_PASSWORD:
+        from_secret: DOCKER_PASSWORD
+    commands:
+    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+    - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
+    - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
+    - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
+    when:
+      branch: master
+      event: [ push, pull_request ]
+    depends_on:
+      - build_image
+
+  # Automatically push Docker image to Quay when a Git tag is created on the master branch, Users should reference the image using the format: image_repo_url:tag@digestsha for immutability and traceability.
+  - name: push_image_tag_to_quay
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    environment:
+      DOCKER_PASSWORD:
+        from_secret: DOCKER_PASSWORD
+    commands:
+    - docker login -u="ukhomeofficedigital+drone" -p=$${DOCKER_PASSWORD} quay.io
+    - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_TAG}
+    - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_TAG}
+    when:
+      branch: master
+      event: [tag]
+
+  - name: scan_node_packages
+    pull: always
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/trivy/client:latest
+    resources:
+      limits:
+        cpu: 1000
+        memory: 1024Mi
+    environment:
+      IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
+      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+      FAIL_ON_DETECTION: true
+      IGNORE_UNFIXED: false
+    when:
+      event: [push, pull_request, tag]
+    depends_on:
+      - image_to_quay
 
 services:
   - name: docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
+volumes:
+  - name: dockersock
+    temp: {}
 ...
