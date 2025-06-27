@@ -129,6 +129,8 @@ steps:
     when:
       branch: master
       event: [tag]
+    depends_on:
+      - build_image
 
   - name: scan_node_packages
     pull: always
