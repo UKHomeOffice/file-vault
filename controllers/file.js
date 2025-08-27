@@ -107,6 +107,7 @@ async function clamAV(req, res, next) {
       };
       return next(err);
     }
+    debug('no virus found');
     return next();
   }
   catch (err) {
