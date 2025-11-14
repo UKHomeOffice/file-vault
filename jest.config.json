@@ -1,0 +1,11 @@
+{
+  "collectCoverage": true,
+  "collectCoverageFrom": [
+    "**/*.js",
+    "!**/node_modules/**",
+    "!**/coverage/**",
+    "!config/**",
+    "!controllers/**"
+  ],
+  "setupFiles": ["<rootDir>/jest.env.js"]
+}

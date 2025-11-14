@@ -2,3 +2,4 @@ node_modules
 uploads
 .idea
 .env
+coverage
