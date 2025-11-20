@@ -4,7 +4,8 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const AWS = require('aws-sdk');
+const { PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const Model = require('hof').model;
 const fs = require('fs');
 const onFinished = require('on-finished');
@@ -29,14 +30,7 @@ const upload = multer({
   dest: config.get('fileDestination')
 });
 
-AWS.config.update({
-  accessKeyId: config.get('aws.accessKeyId'),
-  secretAccessKey: config.get('aws.secretAccessKey'),
-  region: config.get('aws.region'),
-  signatureVersion: config.get('aws.signatureVersion')
-});
-
-const s3 = new AWS.S3();
+const s3 = require('../s3');
 
 function checkExtension(req, res, next) {
   const fileTypes = config.get('fileTypes');
@@ -119,33 +113,35 @@ async function clamAV(req, res, next) {
   }
 }
 
-function s3Upload(req, res, next) {
+async function s3Upload(req, res, next) {
   debug('uploading to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
-    Key: req.file.filename
-  };
-
-  s3.putObject(Object.assign({}, params, {
+    Key: req.file.filename,
     Body: fs.createReadStream(req.file.path),
     ServerSideEncryption: 'aws:kms',
     SSEKMSKeyId: config.get('aws.kmsKeyId'),
     ContentType: req.file.mimetype
-  }), (err) => {
-    if (err) {
-      logger.log('error', err);
-      err = {
-        code: 'S3PUTFailed'
-      };
-    } else {
-      req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
-        Expires: parseInt(config.get('aws.expiry'))
-      }));
-    }
+  };
+
+  try {
+    await s3.send(new PutObjectCommand(params));
+
+    // create a presigned URL for download
+    const getObjectInput = {
+      Bucket: config.get('aws.bucket'),
+      Key: req.file.filename
+    };
+    const expiresIn = parseInt(config.get('aws.expiry')) || 900; // default to 15m
+    req.s3Url = await getSignedUrl(s3, new GetObjectCommand(getObjectInput), { expiresIn });
 
     debug('uploaded file');
-    next(err);
-  });
+    next();
+  } catch (err) {
+    logger.log('error', err);
+    debug('s3 upload failed');
+    next({ code: 'S3PUTFailed' });
+  }
 }
 // Following this example
 // https://stackoverflow.com/questions/60369148/how-do-i-replace-deprecated-crypto-createcipher-in-node-js
@@ -249,14 +245,20 @@ if (config.allowGenerateLinkRoute === 'yes') {
   router.get('/generate-link/:id', (req, res, next) => {
     debug('generating presign url from s3');
 
-    s3.getSignedUrl('getObject', {
-      Bucket: config.get('aws.bucket'),
-      Key: req.params.id,
-      Expires: parseInt(config.get('aws.expiry'))
-    }, async (err, url) => {
-      logger.log('info', 'getting generated file-vault url');
-      await getRequest(url, res, next);
-    });
+    (async () => {
+      try {
+        const expiresIn = parseInt(config.get('aws.expiry')) || 900;
+        const url = await getSignedUrl(s3, new GetObjectCommand({
+          Bucket: config.get('aws.bucket'),
+          Key: req.params.id
+        }), { expiresIn });
+        logger.log('info', 'getting generated file-vault url');
+        await getRequest(url, res, next);
+      } catch (err) {
+        logger.log('error', err);
+        next(err);
+      }
+    })();
   });
 }
 

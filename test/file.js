@@ -4,160 +4,133 @@
 
 const supertest = require('supertest');
 const nock = require('nock');
-const assert = require('assert');
 
 describe('/file', () => {
 
   beforeEach(() => {
-    // delete the require cache
-    delete require.cache[require.resolve('../app')];
-    delete require.cache[require.resolve('config')];
-    delete require.cache[require.resolve('../controllers/file')];
+    // reset module registry so `config` picks up `NODE_CONFIG` overrides
+    jest.resetModules();
 
-    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}}';
-    process.env.NODE_CONFIG = '{"fileTypes": ""}';
+    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": ""}';
   });
 
   describe('config', () => {
-    it('returns an error if the default password isnt set', () => {
+    test('returns an error if the default password isnt set', () => {
       process.env.NODE_CONFIG = '{"aws": {"password":""}}';
 
-      assert.throws(() => require('../controllers/file'), Error, 'please set the AWS_PASSWORD');
+      expect(() => require('../controllers/file')).toThrow(Error);
     });
   });
 
   describe('POSTing', () => {
 
     describe('no data', () => {
-      it('returns an error', (done) => {
-        supertest(require('../app').app)
+      test('returns an error', async () => {
+        await supertest(require('../app').app)
           .post('/file')
           .expect('Content-type', /json/)
           .expect(400, {
             code: 'FileNotFound'
-          })
-          .end(done);
+          });
       });
     });
 
     describe('data', () => {
 
-      it('returns an error when virus scanner unavailable', (done) => {
-        supertest(require('../app').app)
+      test('returns an error when virus scanner unavailable', async () => {
+        await supertest(require('../app').app)
           .post('/file')
           .attach('document', 'test/fixtures/cat.gif')
           .expect(400, {
             code: 'VirusScanFailed'
-          })
-          .end(done);
+          });
       });
 
       describe('virus scanning', () => {
 
-        it('returns an error when virus scanner finds a virus!', (done) => {
+        test('returns an error when virus scanner finds a virus!', async () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : false');
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
               code: 'VirusFound'
-            })
-            .end(done);
+            });
         });
 
       });
 
       describe('putting the file into a bucket', () => {
-        it('returns an error when it fails to put', (done) => {
+        test('returns an error when it fails to put', async () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(400);
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
               code: 'S3PUTFailed'
-            })
-            .end(done);
+            });
         });
 
-        it('returns an error when file extension is not in white-list', (done) => {
+        test('returns an error when file extension is not in white-list', async () => {
           process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc"}';
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
               code: 'FileExtensionNotAllowed'
-            })
-            .end(done);
+            });
         });
 
-        it('returns when uppercase file extension is used', (done) => {
+        test('returns when uppercase file extension is used', async () => {
           process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
-          supertest(require('../app').app)
+          const res = await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/upper_case_document.PDF')
-            .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
-            });
+            .expect(200);
+          expect(res.body.url.indexOf('http://localhost/file/')).not.toBe(-1);
         });
 
-        it('returns when mixedcase file extension is used', (done) => {
+        test('returns when mixedcase file extension is used', async () => {
           process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
-          supertest(require('../app').app)
+          const res = await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/mixed_case_document.pDf')
-            .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
-            });
+            .expect(200);
+          expect(res.body.url.indexOf('http://localhost/file/')).not.toBe(-1);
         });
 
-        it('returns a short url when it successfully puts', (done) => {
+        test('returns a short url when it successfully puts', async () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
 
-          supertest(require('../app').app)
+          const res = await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
-            .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
-            });
+            .expect(200);
+          expect(res.body.url.indexOf('http://localhost/file/')).not.toBe(-1);
         });
 
       });
 
       describe('GETing a resource', () => {
-        it('makes a AWS signedUrl', (done) => {
+        test('makes a AWS signedUrl', async () => {
           const fileVaultUrl = '/file/821898ae17bead075c0b6480734c56c9';
           const dateParam = 'date=20181129T224820Z';
           /* eslint-disable max-len */
@@ -177,10 +150,9 @@ describe('/file', () => {
             })
             .reply(200);
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .get(`${fileVaultUrl}?${dateParam}&${idParam}`)
-            .expect(200)
-            .end(done);
+            .expect(200);
         });
       });
 
