@@ -1,0 +1,16 @@
+name: Scan for Evil Packages
+
+on:
+  repository_dispatch:
+    types: [trigger-from-scanmaestro]
+  pull_request:
+    branches: [master]
+
+jobs:
+  scan:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Run Scan for Evil Packages
+        uses: UKHomeOffice/hof-maestro-scanner/.github/actions/scan-for-evil-packages@main
+        with:
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
