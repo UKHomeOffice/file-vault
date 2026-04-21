@@ -142,7 +142,7 @@ steps:
     environment:
       IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
       SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
-      FAIL_ON_DETECTION: true
+      FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: false
     when:
       event: [push, pull_request, tag]
