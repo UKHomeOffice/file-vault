@@ -5,182 +5,430 @@
 const supertest = require('supertest');
 const nock = require('nock');
 const assert = require('assert');
+const { URL } = require('url');
+
+let warnSpy;
+let emitWarningSpy;
+let originalNoDeprecation;
+let originalNodeEnv;
+let originalDebug;
+
+function parseFileVaultUrl(fileVaultUrl) {
+  const parsedUrl = new URL(fileVaultUrl);
+  return {
+    objectId: parsedUrl.pathname.split('/').pop(),
+    date: parsedUrl.searchParams.get('date'),
+    id: parsedUrl.searchParams.get('id')
+  };
+}
+
+async function uploadDocumentWithSignedUrl() {
+  process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "returnOriginalSignedUrl": "yes"}';
+
+  nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
+  nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+
+  const uploadResponse = await supertest(require('../app').app)
+    .post('/file')
+    .attach('document', 'test/fixtures/cat.gif')
+    .expect(200);
+
+  return {
+    uploadResponse,
+    fileVaultUrl: parseFileVaultUrl(uploadResponse.body.url),
+    originalSignedUrl: new URL(uploadResponse.body.originalSignedUrl)
+  };
+}
 
 describe('/file', () => {
-
   beforeEach(() => {
-    // delete the require cache
-    delete require.cache[require.resolve('../app')];
-    delete require.cache[require.resolve('config')];
-    delete require.cache[require.resolve('../controllers/file')];
+    jest.resetModules();
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    emitWarningSpy = jest.spyOn(process, 'emitWarning').mockImplementation(() => {});
+    originalNoDeprecation = process.noDeprecation;
+    originalNodeEnv = process.env.NODE_ENV;
+    originalDebug = process.env.DEBUG;
+    process.noDeprecation = true;
+    process.env.NODE_ENV = 'test';
+    delete process.env.DEBUG;
+    delete process.env.AWS_PASSWORD;
+    delete process.env.FILE_EXTENSION_WHITELIST;
+    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": ""}';
+  });
 
-    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}}';
-    process.env.NODE_CONFIG = '{"fileTypes": ""}';
+  afterEach(() => {
+    nock.abortPendingRequests();
+    nock.cleanAll();
+    jest.dontMock('@aws-sdk/s3-request-presigner');
+    jest.unmock('@aws-sdk/s3-request-presigner');
+    warnSpy.mockRestore();
+    emitWarningSpy.mockRestore();
+    process.noDeprecation = originalNoDeprecation;
+    process.env.NODE_ENV = originalNodeEnv;
+    if (originalDebug === undefined) {
+      delete process.env.DEBUG;
+    } else {
+      process.env.DEBUG = originalDebug;
+    }
+  });
+
+  describe('app wiring', () => {
+    it('starts the app on the configured port', () => {
+      const appModule = require('../app');
+      const listenSpy = jest.spyOn(appModule.app, 'listen').mockImplementation((port, callback) => {
+        callback();
+        return {};
+      });
+
+      appModule.start();
+
+      expect(listenSpy).toHaveBeenCalledWith(3000, expect.any(Function));
+      listenSpy.mockRestore();
+    });
+
+    it('skips healthz logging when the route succeeds', async () => {
+      const appModule = require('../app');
+
+      appModule.app.use((req, res, next) => {
+        req.session = { id: 'healthz-session' };
+        next();
+      });
+
+      appModule.app.get('/healthz', (req, res) => res.status(200).send('ok'));
+
+      await supertest(appModule.app)
+        .get('/healthz')
+        .expect(200, 'ok');
+    });
+  });
+
+  describe('logger', () => {
+    it('logs info, debug, error and stream output when debug is enabled', () => {
+      process.env.DEBUG = '1';
+      process.env.NODE_ENV = 'development';
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const logger = require('../logger');
+
+      logger.info('info-message');
+      logger.debug('debug-message');
+      logger.error('error-message');
+      logger.stream.write('stream-message\n');
+
+      expect(logSpy).toHaveBeenCalledWith('info-message');
+      expect(logSpy).toHaveBeenCalledWith('debug-message');
+      expect(logSpy).toHaveBeenCalledWith('stream-message');
+      expect(errorSpy).toHaveBeenCalledWith('error-message');
+
+      logSpy.mockRestore();
+      errorSpy.mockRestore();
+    });
+
+    it('suppresses debug output when debug is disabled', () => {
+      process.env.NODE_ENV = 'development';
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      const logger = require('../logger');
+
+      logger.debug('debug-message');
+
+      expect(logSpy).not.toHaveBeenCalled();
+
+      logSpy.mockRestore();
+    });
   });
 
   describe('config', () => {
     it('returns an error if the default password isnt set', () => {
-      process.env.NODE_CONFIG = '{"aws": {"password":""}}';
+      process.env.NODE_CONFIG = '{"aws": {"password":""}, "fileTypes": ""}';
 
-      assert.throws(() => require('../controllers/file'), Error, 'please set the AWS_PASSWORD');
+      expect(() => {
+        jest.isolateModules(() => {
+          require('../controllers/file');
+        });
+      }).toThrow('please set the AWS_PASSWORD');
     });
   });
 
   describe('POSTing', () => {
 
     describe('no data', () => {
-      it('returns an error', (done) => {
-        supertest(require('../app').app)
+      it('returns an error', async () => {
+        await supertest(require('../app').app)
           .post('/file')
           .expect('Content-type', /json/)
           .expect(400, {
             code: 'FileNotFound'
-          })
-          .end(done);
+          });
       });
     });
 
     describe('data', () => {
 
-      it('returns an error when virus scanner unavailable', (done) => {
-        supertest(require('../app').app)
+      it('returns an error when virus scanner unavailable', async () => {
+        await supertest(require('../app').app)
           .post('/file')
           .attach('document', 'test/fixtures/cat.gif')
           .expect(400, {
             code: 'VirusScanFailed'
-          })
-          .end(done);
+          });
       });
 
       describe('virus scanning', () => {
 
-        it('returns an error when virus scanner finds a virus!', (done) => {
+        it('returns an error when virus scanner finds a virus!', async () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : false');
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
               code: 'VirusFound'
-            })
-            .end(done);
+            });
+        });
+
+        it('handles json virus scanner response payloads', async () => {
+          // create a mock clamav rest server that returns json instead of a string
+          nock('http://localhost:8080').post('/scan').once().reply(200, { result: 'Everything ok : true' });
+          // create a mock aws response
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+
+          const res = await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(200);
+
+          assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
         });
 
       });
 
       describe('putting the file into a bucket', () => {
-        it('returns an error when it fails to put', (done) => {
+        it('returns an error when it fails to put', async () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(400);
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
               code: 'S3PUTFailed'
-            })
-            .end(done);
+            });
         });
 
-        it('returns an error when file extension is not in white-list', (done) => {
-          process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc"}';
+        it('returns an error when file extension is not in white-list', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "jpg,jpeg,pdf,svg,txt,doc"}';
 
-          supertest(require('../app').app)
+          await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
             .expect(400, {
               code: 'FileExtensionNotAllowed'
-            })
-            .end(done);
+            });
         });
 
-        it('returns when uppercase file extension is used', (done) => {
-          process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
+        it('returns when uppercase file extension is used', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
-          supertest(require('../app').app)
+
+          const res = await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/upper_case_document.PDF')
-            .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
-            });
+            .expect(200);
+
+          assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
         });
 
-        it('returns when mixedcase file extension is used', (done) => {
-          process.env.NODE_CONFIG = '{"fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
+        it('returns when mixedcase file extension is used', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "jpg,jpeg,pdf,svg,txt,doc,pdf"}';
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
-          supertest(require('../app').app)
+
+          const res = await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/mixed_case_document.pDf')
-            .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
-            });
+            .expect(200);
+
+          assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
         });
 
-        it('returns a short url when it successfully puts', (done) => {
+        it('returns a short url when it successfully puts', async () => {
           // create a mock clamav rest server
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           // create a mock aws response
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
 
-          supertest(require('../app').app)
+          const res = await supertest(require('../app').app)
             .post('/file')
             .attach('document', 'test/fixtures/cat.gif')
-            .expect(200)
-            .end((err, res) => {
-              if (err) {
-                throw err;
-              }
-              assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
-              done();
-            });
+            .expect(200);
+
+          assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
+        });
+
+        it('returns the original signed url when configured', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "returnOriginalSignedUrl": "yes"}';
+
+          nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+
+          const res = await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(200);
+
+          assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
+          assert.ok(res.body.originalSignedUrl.indexOf('https://testbucket.s3.eu-west-1.amazonaws.com/') !== -1);
+          assert.ok(res.body.originalSignedUrl.indexOf('X-Amz-Signature=') !== -1);
         });
 
       });
 
       describe('GETing a resource', () => {
-        it('makes a AWS signedUrl', (done) => {
-          const fileVaultUrl = '/file/821898ae17bead075c0b6480734c56c9';
-          const dateParam = 'date=20181129T224820Z';
-          /* eslint-disable max-len */
-          const idParam = 'id=70078d4568a7cd716b36a2b89feb13c8adaab9a0751253115046fc7cc0708bcf2102d6f670cc56646c69a4a6338fb2e79dae049b74873adecbf96e1f563debb1';
-          /* eslint-enable max-len */
+        it('makes a AWS signedUrl', async () => {
+          const { fileVaultUrl, originalSignedUrl } = await uploadDocumentWithSignedUrl();
 
-          // assert the correct bucket item gets called
           nock('https://testbucket.s3.eu-west-1.amazonaws.com')
-            .get('/821898ae17bead075c0b6480734c56c9')
+            .get(`/${fileVaultUrl.objectId}`)
             .query({
-              'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
-              'X-Amz-Credential': 'test_key_id/20181129/eu-west-1/s3/aws4_request',
-              'X-Amz-Date': '20181129T224820Z',
-              'X-Amz-Expires': '3600',
-              'X-Amz-Signature': 'fb16cae894e9b2e9af74e36cf5cf456ce130f0026b6485b113ee335322de0712',
-              'X-Amz-SignedHeaders': 'host'
+              'X-Amz-Algorithm': originalSignedUrl.searchParams.get('X-Amz-Algorithm'),
+              'X-Amz-Credential': originalSignedUrl.searchParams.get('X-Amz-Credential'),
+              'X-Amz-Date': originalSignedUrl.searchParams.get('X-Amz-Date'),
+              'X-Amz-Expires': originalSignedUrl.searchParams.get('X-Amz-Expires'),
+              'X-Amz-Signature': originalSignedUrl.searchParams.get('X-Amz-Signature'),
+              'X-Amz-SignedHeaders': originalSignedUrl.searchParams.get('X-Amz-SignedHeaders')
             })
             .reply(200);
 
-          supertest(require('../app').app)
-            .get(`${fileVaultUrl}?${dateParam}&${idParam}`)
-            .expect(200)
-            .end(done);
+          await supertest(require('../app').app)
+            .get(`/file/${fileVaultUrl.objectId}?date=${fileVaultUrl.date}&id=${encodeURIComponent(fileVaultUrl.id)}`)
+            .expect(200);
+        });
+
+        it('retrieves a resource using the modern encrypted id format', async () => {
+          const { fileVaultUrl, originalSignedUrl } = await uploadDocumentWithSignedUrl();
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com')
+            .get(`/${fileVaultUrl.objectId}`)
+            .query(actualQuery => actualQuery['X-Amz-Algorithm'] === originalSignedUrl.searchParams.get('X-Amz-Algorithm')
+              && actualQuery['X-Amz-Credential'] === originalSignedUrl.searchParams.get('X-Amz-Credential')
+              && actualQuery['X-Amz-Date'] === originalSignedUrl.searchParams.get('X-Amz-Date')
+              && actualQuery['X-Amz-Expires'] === originalSignedUrl.searchParams.get('X-Amz-Expires')
+              && actualQuery['X-Amz-Signature'] === originalSignedUrl.searchParams.get('X-Amz-Signature')
+              && actualQuery['X-Amz-SignedHeaders'] === originalSignedUrl.searchParams.get('X-Amz-SignedHeaders'))
+            .reply(200, 'file-body');
+
+          const response = await supertest(require('../app').app)
+            .get(`/file/${fileVaultUrl.objectId}?date=${fileVaultUrl.date}&id=${encodeURIComponent(fileVaultUrl.id)}`)
+            .expect(200);
+
+          assert.strictEqual(response.text, 'file-body');
+        });
+
+        it('returns 500 when the downstream file request fails', async () => {
+          const { fileVaultUrl } = await uploadDocumentWithSignedUrl();
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com')
+            .get(`/${fileVaultUrl.objectId}`)
+            .query(true)
+            .reply(500, 'failure');
+
+          await supertest(require('../app').app)
+            .get(`/file/${fileVaultUrl.objectId}?date=${fileVaultUrl.date}&id=${encodeURIComponent(fileVaultUrl.id)}`)
+            .expect(500);
+        });
+
+        it('returns 400 when GET request is missing encrypted id query parameter', async () => {
+          const { fileVaultUrl } = await uploadDocumentWithSignedUrl();
+
+          await supertest(require('../app').app)
+            .get(`/file/${fileVaultUrl.objectId}?date=${fileVaultUrl.date}`)
+            .expect(400, {
+              code: 'FileGetInvalidRequest'
+            });
+        });
+
+      });
+
+      describe('generate-link route', () => {
+        it('returns the object when generate-link is enabled', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "allowGenerateLinkRoute": "yes"}';
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com')
+            .get('/test-document')
+            .query(true)
+            .reply(200, 'generated-link-body');
+
+          const response = await supertest(require('../app').app)
+            .get('/file/generate-link/test-document')
+            .expect(200);
+
+          assert.strictEqual(response.text, 'generated-link-body');
+        });
+
+        it('returns 500 when generate-link retrieval fails', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "allowGenerateLinkRoute": "yes"}';
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com')
+            .get('/test-document')
+            .query(true)
+            .reply(500, 'failure');
+
+          await supertest(require('../app').app)
+            .get('/file/generate-link/test-document')
+            .expect(500);
+        });
+
+        it('returns 500 when presigning fails', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "allowGenerateLinkRoute": "yes"}';
+
+          jest.doMock('@aws-sdk/s3-request-presigner', () => ({
+            getSignedUrl: jest.fn().mockRejectedValue(new Error('presign failed'))
+          }));
+
+          const app = require('../app').app;
+
+          await supertest(app)
+            .get('/file/generate-link/test-document')
+            .expect(500);
+        });
+      });
+
+      describe('timeout fallback', () => {
+        it('uses the default timeout when timeout config is invalid', async () => {
+          const { fileVaultUrl } = await uploadDocumentWithSignedUrl();
+
+          jest.resetModules();
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "timeout": "invalid"}';
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com')
+            .get(`/${fileVaultUrl.objectId}`)
+            .query(true)
+            .reply(200, 'ok');
+
+          await supertest(require('../app').app)
+            .get(`/file/${fileVaultUrl.objectId}?date=${fileVaultUrl.date}&id=${encodeURIComponent(fileVaultUrl.id)}`)
+            .expect(200);
+        });
+
+        it('uses the configured timeout when timeout config is valid', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "timeout": "20"}';
+
+          await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(400, {
+              code: 'VirusScanFailed'
+            });
         });
       });
 

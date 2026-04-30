@@ -4,8 +4,9 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const AWS = require('aws-sdk');
-const Model = require('hof').model;
+const { PutObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+const axios = require('axios');
 const fs = require('fs');
 const onFinished = require('on-finished');
 const config = require('config');
@@ -20,6 +21,22 @@ const IV_LENGTH = 16;
 const ENCRYPTION_KEY = Buffer.concat([Buffer.from(password), Buffer.alloc(32)], 32);
 
 const logger = require('../logger');
+const s3 = require('../clients/s3');
+
+/**
+ * Resolves the configured request timeout in milliseconds.
+ * Falls back to 15 seconds when config is missing or invalid.
+ *
+ * @returns {number} Timeout in milliseconds.
+ */
+function getTimeoutMs() {
+  const timeoutSeconds = Number(config.get('timeout'));
+  if (Number.isFinite(timeoutSeconds) && timeoutSeconds > 0) {
+    return timeoutSeconds * 1000;
+  }
+
+  return 15000;
+}
 
 if (password === '') {
   throw new Error('please set the AWS_PASSWORD');
@@ -29,15 +46,14 @@ const upload = multer({
   dest: config.get('fileDestination')
 });
 
-AWS.config.update({
-  accessKeyId: config.get('aws.accessKeyId'),
-  secretAccessKey: config.get('aws.secretAccessKey'),
-  region: config.get('aws.region'),
-  signatureVersion: config.get('aws.signatureVersion')
-});
-
-const s3 = new AWS.S3();
-
+/**
+ * Validates an uploaded file extension against the configured whitelist.
+ *
+ * @param {import('express').Request} req Express request.
+ * @param {import('express').Response} res Express response.
+ * @param {import('express').NextFunction} next Express next function.
+ * @returns {void}
+ */
 function checkExtension(req, res, next) {
   const fileTypes = config.get('fileTypes');
 
@@ -62,6 +78,14 @@ function checkExtension(req, res, next) {
   }
 }
 
+/**
+ * Schedules deletion of the temporary uploaded file once the response finishes.
+ *
+ * @param {import('express').Request} req Express request.
+ * @param {import('express').Response} res Express response.
+ * @param {import('express').NextFunction} next Express next function.
+ * @returns {void}
+ */
 function deleteFileOnFinishedRequest(req, res, next) {
   if (req.file) {
     onFinished(res, () => {
@@ -80,6 +104,14 @@ function deleteFileOnFinishedRequest(req, res, next) {
   }
 }
 
+/**
+ * Sends the uploaded file to ClamAV REST for virus scanning.
+ *
+ * @param {import('express').Request} req Express request.
+ * @param {import('express').Response} res Express response.
+ * @param {import('express').NextFunction} next Express next function.
+ * @returns {Promise<void>}
+ */
 async function clamAV(req, res, next) {
   debug('checking for virus');
   let fileData = {
@@ -88,20 +120,19 @@ async function clamAV(req, res, next) {
   };
 
   const formData = new FormData();
-  formData.append('file', fileData.name, fileData.file);
+  formData.append('file', fileData.file, fileData.name);
   try {
     const params = {
       method: 'POST',
       url: config.get('clamRest.url'),
       data: formData,
-      timeout: parseInt(config.get('timeout')) * 1000,
-      fileSize: parseInt(config.get('fileSize')),
+      timeout: getTimeoutMs(),
       headers: { ...formData.getHeaders() }
     };
-    const model = new Model();
-    const response = await model._request(params);
+    const response = await axios(params);
     const resBody = response.data;
-    if (resBody.indexOf('false') !== -1) {
+    const responseText = typeof resBody === 'string' ? resBody : JSON.stringify(resBody);
+    if (responseText.indexOf('false') !== -1) {
       let err = {
         code: 'VirusFound'
       };
@@ -119,36 +150,50 @@ async function clamAV(req, res, next) {
   }
 }
 
-function s3Upload(req, res, next) {
+/**
+ * Uploads the scanned file to S3 and stores a presigned URL on the request.
+ *
+ * @param {import('express').Request} req Express request.
+ * @param {import('express').Response} res Express response.
+ * @param {import('express').NextFunction} next Express next function.
+ * @returns {Promise<void>}
+ */
+async function s3Upload(req, res, next) {
   debug('uploading to s3');
   const params = {
     Bucket: config.get('aws.bucket'),
     Key: req.file.filename
   };
 
-  s3.putObject(Object.assign({}, params, {
-    Body: fs.createReadStream(req.file.path),
-    ServerSideEncryption: 'aws:kms',
-    SSEKMSKeyId: config.get('aws.kmsKeyId'),
-    ContentType: req.file.mimetype
-  }), (err) => {
-    if (err) {
-      logger.log('error', err);
-      err = {
-        code: 'S3PUTFailed'
-      };
-    } else {
-      req.s3Url = s3.getSignedUrl('getObject', Object.assign({}, params, {
-        Expires: parseInt(config.get('aws.expiry'))
-      }));
-    }
+  try {
+    await s3.send(new PutObjectCommand(Object.assign({}, params, {
+      Body: fs.createReadStream(req.file.path),
+      ServerSideEncryption: 'aws:kms',
+      SSEKMSKeyId: config.get('aws.kmsKeyId'),
+      ContentType: req.file.mimetype
+    })));
 
+    req.s3Url = await getSignedUrl(s3, new GetObjectCommand(Object.assign({}, params)), {
+      expiresIn: parseInt(config.get('aws.expiry'))
+    });
     debug('uploaded file');
-    next(err);
-  });
+    next();
+  }
+  catch (err) {
+    logger.log('error', err);
+    debug('uploaded file');
+    next({
+      code: 'S3PUTFailed'
+    });
+  }
 }
-// Following this example
-// https://stackoverflow.com/questions/60369148/how-do-i-replace-deprecated-crypto-createcipher-in-node-js
+
+/**
+ * Encrypts a signature string into the file-vault id format: hex(iv):hex(ciphertext).
+ *
+ * @param {string} text Plaintext signature.
+ * @returns {string} Encrypted value in file-vault id format.
+ */
 function encrypt(text) {
   let iv = crypto.randomBytes(IV_LENGTH);
   let cipher = crypto.createCipheriv(algorithm, Buffer.from(ENCRYPTION_KEY, 'hex'), iv);
@@ -157,6 +202,12 @@ function encrypt(text) {
   return iv.toString('hex') + ':' + encrypted.toString('hex');
 }
 
+/**
+ * Decrypts a file-vault id value in format hex(iv):hex(ciphertext).
+ *
+ * @param {string} text Encrypted file-vault id.
+ * @returns {string} Decrypted plaintext signature.
+ */
 function decrypt(text) {
   let textParts = text.split(':');
   let iv = Buffer.from(textParts.shift(), 'hex');
@@ -167,33 +218,29 @@ function decrypt(text) {
   return decrypted.toString();
 }
 
-function decrypt_deprecated(text) {
-  const decipher = crypto.createDecipher(algorithm, password);
-  let dec = decipher.update(text, 'hex', 'utf8');
-  dec += decipher.final('utf8');
-  return dec;
-}
-
+/**
+ * Performs a binary GET request and writes the upstream response through.
+ *
+ * @param {string} url Target URL.
+ * @param {import('express').Response} res Express response.
+ * @param {import('express').NextFunction} next Express next function.
+ * @returns {Promise<void>}
+ */
 async function getRequest(url, res, next) {
   try {
     const reqConf = {
       method: 'GET',
       url: url,
       responseType: 'arraybuffer',
-      reponseEncoding: 'binary',
-      data: {
-        encoding: 'binary',
-        timeout: config.get('timeout') * 1000,
-      }
+      timeout: getTimeoutMs()
     };
-    const model = new Model();
-    const response = await model._request(reqConf);
+    const response = await axios(reqConf);
     res.writeHead(response.status, response.headers);
     res.end(response.data);
   }
   catch (err) {
     logger.log('error', err);
-    return next(err);
+    return next(new Error('FileGetFailed'));
   }
 }
 
@@ -205,7 +252,7 @@ router.post('/', [
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
-    const s3Item = s3Url.pathname;
+    const s3Item = `/${req.file.filename}`;
     const Date = s3Url.searchParams.get('X-Amz-Date');
     const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
 
@@ -230,33 +277,65 @@ router.post('/', [
 
 router.get('/:id', async (req, res, next) => {
   const reqId = req.query.id;
-  const decyptedId = reqId.indexOf(':') > -1 ? decrypt(reqId) : decrypt_deprecated(reqId);
+  const requestDate = req.query.date;
+
+  if (!reqId || !requestDate || typeof reqId !== 'string' || typeof requestDate !== 'string') {
+    return next({
+      code: 'FileGetInvalidRequest'
+    });
+  }
+
+  let decryptedId;
+  let requestDay;
+  try {
+    decryptedId = decrypt(reqId);
+    requestDay = requestDate.split('T')[0];
+  }
+  catch (err) {
+    logger.log('error', err);
+    return next({
+      code: 'FileGetInvalidRequest'
+    });
+  }
 
   let params = `?X-Amz-Algorithm=${config.get('aws.amzAlgorithm')}`;
   params += `&X-Amz-Credential=${config.get('aws.accessKeyId')}`;
-  params += `%2F${req.query.date.split('T')[0]}`;
+  params += `%2F${requestDay}`;
   params += `%2F${config.get('aws.region')}%2Fs3%2Faws4_request`;
-  params += `&X-Amz-Date=${req.query.date}`;
+  params += `&X-Amz-Date=${requestDate}`;
   params += `&X-Amz-Expires=${parseInt(config.get('aws.expiry'))}`;
-  params += `&X-Amz-Signature=${decyptedId}`;
+  params += `&X-Amz-Signature=${decryptedId}`;
   params += '&X-Amz-SignedHeaders=host';
 
+  let objectUrl;
+  if (config.has('aws.endpoint') && config.get('aws.endpoint')) {
+    objectUrl = `${config.get('aws.endpoint').replace(/\/$/, '')}/${config.get('aws.bucket')}/${req.params.id}`;
+  } else {
+    objectUrl = `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}`;
+  }
+
   logger.log('info', 'getting file-vault url');
-  await getRequest(`https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}${params}`, res, next);
+  await getRequest(`${objectUrl}${params}`, res, next);
 })
 
 if (config.allowGenerateLinkRoute === 'yes') {
-  router.get('/generate-link/:id', (req, res, next) => {
+  router.get('/generate-link/:id', async (req, res, next) => {
     debug('generating presign url from s3');
 
-    s3.getSignedUrl('getObject', {
-      Bucket: config.get('aws.bucket'),
-      Key: req.params.id,
-      Expires: parseInt(config.get('aws.expiry'))
-    }, async (err, url) => {
+    try {
+      const url = await getSignedUrl(s3, new GetObjectCommand({
+        Bucket: config.get('aws.bucket'),
+        Key: req.params.id
+      }), {
+        expiresIn: parseInt(config.get('aws.expiry'))
+      });
       logger.log('info', 'getting generated file-vault url');
       await getRequest(url, res, next);
-    });
+    }
+    catch (err) {
+      logger.log('error', err);
+      next(err);
+    }
   });
 }
 

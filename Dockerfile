@@ -1,4 +1,4 @@
-FROM quay.io/ukhomeofficedigital/hof-nodejs:20.19.0-alpine3.21@sha256:aad584fa26cb2838739527166c8965d95d0d2d9b88cfd5e3e2d3b8647ae03101
+FROM node:24.15.0-alpine3.23@sha256:8e2c930fda481a6ec141fe5a88e8c249c69f8102fe98af505f38c081649ea749
 
 USER root
 # Update packages as a result of Trivy security vulnerability checks
