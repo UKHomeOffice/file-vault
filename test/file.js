@@ -59,6 +59,8 @@ describe('/file', () => {
   afterEach(() => {
     nock.abortPendingRequests();
     nock.cleanAll();
+    jest.dontMock('axios');
+    jest.unmock('axios');
     jest.dontMock('@aws-sdk/s3-request-presigner');
     jest.unmock('@aws-sdk/s3-request-presigner');
     warnSpy.mockRestore();
@@ -201,6 +203,46 @@ describe('/file', () => {
             .expect(200);
 
           assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
+        });
+
+        it('passes configured fileSize to virus scanner request', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "fileSize": "98765"}';
+
+          const axiosMock = jest.fn().mockResolvedValue({ data: 'Everything ok : true' });
+          jest.doMock('axios', () => axiosMock);
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+
+          await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(200);
+
+          expect(axiosMock).toHaveBeenCalledWith(expect.objectContaining({
+            method: 'POST',
+            url: 'http://localhost:8080/scan',
+            fileSize: 98765
+          }));
+        });
+
+        it('returns error when file exceeds fileSize in virus scanner request', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "fileSize": "100"}';
+
+          const axiosMock = jest.fn().mockResolvedValue({ data: 'Everything ok : false' });
+          jest.doMock('axios', () => axiosMock);
+
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(400);
+
+          await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(400);
+
+          expect(axiosMock).toHaveBeenCalledWith(expect.objectContaining({
+            method: 'POST',
+            url: 'http://localhost:8080/scan',
+            fileSize: 100
+          }));
         });
 
       });

@@ -127,6 +127,7 @@ async function clamAV(req, res, next) {
       url: config.get('clamRest.url'),
       data: formData,
       timeout: getTimeoutMs(),
+      fileSize: parseInt(config.get('fileSize')),
       headers: { ...formData.getHeaders() }
     };
     const response = await axios(params);
