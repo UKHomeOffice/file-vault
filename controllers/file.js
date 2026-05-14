@@ -223,7 +223,7 @@ function decrypt(text) {
  * Parses decrypted file id payload, supporting both modern JSON payload and legacy signature-only format.
  *
  * @param {string} decryptedId Decrypted file-vault id content.
- * @returns {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, protocol?: string, host?: string, pathStyle?: string, signedUrl?: string}|null}
+ * @returns {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, protocol?: string, host?: string, pathStyle?: string, signedUrl?: string, signedQuery?: Record<string, string>}|null}
  */
 function parseFileIdPayload(decryptedId) {
   try {
@@ -239,7 +239,16 @@ function parseFileIdPayload(decryptedId) {
         protocol: typeof parsed.protocol === 'string' ? parsed.protocol : undefined,
         host: typeof parsed.host === 'string' ? parsed.host : undefined,
         pathStyle: typeof parsed.pathStyle === 'string' ? parsed.pathStyle : undefined,
-        signedUrl: typeof parsed.signedUrl === 'string' ? parsed.signedUrl : undefined
+        signedUrl: typeof parsed.signedUrl === 'string' ? parsed.signedUrl : undefined,
+        signedQuery: parsed.signedQuery && typeof parsed.signedQuery === 'object'
+          ? Object.entries(parsed.signedQuery)
+            .reduce((acc, [key, value]) => {
+              if (typeof value === 'string') {
+                acc[key] = value;
+              }
+              return acc;
+            }, {})
+          : undefined
       };
     }
   }
@@ -276,7 +285,7 @@ function searchParamsToObject(params) {
  * @param {string} objectUrl S3 object URL without query.
  * @param {string} objectId Requested object key.
  * @param {string} requestDate Date query parameter supplied to file-vault.
- * @param {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, protocol?: string, host?: string, pathStyle?: string, signedUrl?: string}} fileIdPayload Decrypted payload.
+ * @param {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, protocol?: string, host?: string, pathStyle?: string, signedUrl?: string, signedQuery?: Record<string, string>}} fileIdPayload Decrypted payload.
  * @param {URLSearchParams} params Reconstructed URL params sent to S3.
  * @returns {void}
  */
@@ -300,10 +309,34 @@ function logSignatureDiagnostics(objectUrl, objectId, requestDate, fileIdPayload
       hasHost: Boolean(fileIdPayload.host),
       hasPathStyle: Boolean(fileIdPayload.pathStyle),
       hasSignedUrl: Boolean(fileIdPayload.signedUrl),
+      hasSignedQuery: Boolean(fileIdPayload.signedQuery && Object.keys(fileIdPayload.signedQuery).length),
       signatureLength: typeof fileIdPayload.signature === 'string' ? fileIdPayload.signature.length : 0
     },
     reconstructedQuery: searchParamsToObject(params)
   });
+}
+
+/**
+ * Builds the S3 object URL from either payload host metadata or config fallback.
+ *
+ * @param {{protocol?: string, host?: string, pathStyle?: string}} fileIdPayload Decrypted payload.
+ * @param {string} objectId Requested object key.
+ * @returns {string} Absolute object URL without query string.
+ */
+function buildObjectUrl(fileIdPayload, objectId) {
+  if (fileIdPayload.host) {
+    const protocol = (fileIdPayload.protocol || 'https:').replace(/:$/, '');
+    if (fileIdPayload.pathStyle === 'path') {
+      return `${protocol}://${fileIdPayload.host}/${config.get('aws.bucket')}/${objectId}`;
+    }
+    return `${protocol}://${fileIdPayload.host}/${objectId}`;
+  }
+
+  if (config.has('aws.endpoint') && config.get('aws.endpoint')) {
+    return `${config.get('aws.endpoint').replace(/\/$/, '')}/${config.get('aws.bucket')}/${objectId}`;
+  }
+
+  return `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${objectId}`;
 }
 
 /**
@@ -366,7 +399,7 @@ router.post('/', [
       protocol: s3Url.protocol,
       host: s3Url.host,
       pathStyle,
-      signedUrl: req.s3Url
+      signedQuery: searchParamsToObject(s3Url.searchParams)
     };
     const fileId = encrypt(JSON.stringify(fileIdPayload));
 
@@ -413,6 +446,17 @@ router.get('/:id', async (req, res, next) => {
     });
   }
 
+  const objectUrl = buildObjectUrl(fileIdPayload, req.params.id);
+
+  // For compact modern ids, replay all original signed query params.
+  if (fileIdPayload.signedQuery && Object.keys(fileIdPayload.signedQuery).length) {
+    const params = new URLSearchParams(fileIdPayload.signedQuery);
+    logSignatureDiagnostics(objectUrl, req.params.id, requestDate, fileIdPayload, params);
+    logger.log('info', 'getting file-vault url');
+    await getRequest(`${objectUrl}?${params.toString()}`, res, next);
+    return;
+  }
+
   // For modern ids, replay the exact presigned URL to avoid any signature drift.
   if (fileIdPayload.signedUrl) {
     const signedObjectPathname = new URL(fileIdPayload.signedUrl).pathname;
@@ -442,20 +486,6 @@ router.get('/:id', async (req, res, next) => {
 
   if (fileIdPayload.securityToken) {
     params.append('X-Amz-Security-Token', fileIdPayload.securityToken);
-  }
-
-  let objectUrl;
-  if (fileIdPayload.host) {
-    const protocol = (fileIdPayload.protocol || 'https:').replace(/:$/, '');
-    if (fileIdPayload.pathStyle === 'path') {
-      objectUrl = `${protocol}://${fileIdPayload.host}/${config.get('aws.bucket')}/${req.params.id}`;
-    } else {
-      objectUrl = `${protocol}://${fileIdPayload.host}/${req.params.id}`;
-    }
-  } else if (config.has('aws.endpoint') && config.get('aws.endpoint')) {
-    objectUrl = `${config.get('aws.endpoint').replace(/\/$/, '')}/${config.get('aws.bucket')}/${req.params.id}`;
-  } else {
-    objectUrl = `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}`;
   }
 
   logSignatureDiagnostics(objectUrl, req.params.id, requestDate, fileIdPayload, params);
