@@ -341,14 +341,12 @@ describe('/file', () => {
 
           nock('https://testbucket.s3.eu-west-1.amazonaws.com')
             .get(`/${fileVaultUrl.objectId}`)
-            .query({
-              'X-Amz-Algorithm': originalSignedUrl.searchParams.get('X-Amz-Algorithm'),
-              'X-Amz-Credential': originalSignedUrl.searchParams.get('X-Amz-Credential'),
-              'X-Amz-Date': originalSignedUrl.searchParams.get('X-Amz-Date'),
-              'X-Amz-Expires': originalSignedUrl.searchParams.get('X-Amz-Expires'),
-              'X-Amz-Signature': originalSignedUrl.searchParams.get('X-Amz-Signature'),
-              'X-Amz-SignedHeaders': originalSignedUrl.searchParams.get('X-Amz-SignedHeaders')
-            })
+            .query(actualQuery => actualQuery['X-Amz-Algorithm'] === originalSignedUrl.searchParams.get('X-Amz-Algorithm')
+              && actualQuery['X-Amz-Credential'] === originalSignedUrl.searchParams.get('X-Amz-Credential')
+              && actualQuery['X-Amz-Date'] === originalSignedUrl.searchParams.get('X-Amz-Date')
+              && actualQuery['X-Amz-Expires'] === originalSignedUrl.searchParams.get('X-Amz-Expires')
+              && actualQuery['X-Amz-Signature'] === originalSignedUrl.searchParams.get('X-Amz-Signature')
+              && actualQuery['X-Amz-SignedHeaders'] === originalSignedUrl.searchParams.get('X-Amz-SignedHeaders'))
             .reply(200);
 
           await supertest(require('../app').app)
