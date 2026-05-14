@@ -223,7 +223,7 @@ function decrypt(text) {
  * Parses decrypted file id payload, supporting both modern JSON payload and legacy signature-only format.
  *
  * @param {string} decryptedId Decrypted file-vault id content.
- * @returns {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, protocol?: string, host?: string, pathStyle?: string, signedUrl?: string, signedQuery?: Record<string, string>}|null}
+ * @returns {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, contentSha256?: string, checksumMode?: string, operationId?: string}|null}
  */
 function parseFileIdPayload(decryptedId) {
   try {
@@ -236,19 +236,9 @@ function parseFileIdPayload(decryptedId) {
         expires: typeof parsed.expires === 'string' ? parsed.expires : undefined,
         signedHeaders: typeof parsed.signedHeaders === 'string' ? parsed.signedHeaders : undefined,
         securityToken: typeof parsed.securityToken === 'string' ? parsed.securityToken : undefined,
-        protocol: typeof parsed.protocol === 'string' ? parsed.protocol : undefined,
-        host: typeof parsed.host === 'string' ? parsed.host : undefined,
-        pathStyle: typeof parsed.pathStyle === 'string' ? parsed.pathStyle : undefined,
-        signedUrl: typeof parsed.signedUrl === 'string' ? parsed.signedUrl : undefined,
-        signedQuery: parsed.signedQuery && typeof parsed.signedQuery === 'object'
-          ? Object.entries(parsed.signedQuery)
-            .reduce((acc, [key, value]) => {
-              if (typeof value === 'string') {
-                acc[key] = value;
-              }
-              return acc;
-            }, {})
-          : undefined
+        contentSha256: typeof parsed.contentSha256 === 'string' ? parsed.contentSha256 : undefined,
+        checksumMode: typeof parsed.checksumMode === 'string' ? parsed.checksumMode : undefined,
+        operationId: typeof parsed.operationId === 'string' ? parsed.operationId : undefined
       };
     }
   }
@@ -285,7 +275,7 @@ function searchParamsToObject(params) {
  * @param {string} objectUrl S3 object URL without query.
  * @param {string} objectId Requested object key.
  * @param {string} requestDate Date query parameter supplied to file-vault.
- * @param {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, protocol?: string, host?: string, pathStyle?: string, signedUrl?: string, signedQuery?: Record<string, string>}} fileIdPayload Decrypted payload.
+ * @param {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string, contentSha256?: string, checksumMode?: string, operationId?: string}} fileIdPayload Decrypted payload.
  * @param {URLSearchParams} params Reconstructed URL params sent to S3.
  * @returns {void}
  */
@@ -305,38 +295,13 @@ function logSignatureDiagnostics(objectUrl, objectId, requestDate, fileIdPayload
       hasExpires: Boolean(fileIdPayload.expires),
       hasSignedHeaders: Boolean(fileIdPayload.signedHeaders),
       hasSecurityToken: Boolean(fileIdPayload.securityToken),
-      hasProtocol: Boolean(fileIdPayload.protocol),
-      hasHost: Boolean(fileIdPayload.host),
-      hasPathStyle: Boolean(fileIdPayload.pathStyle),
-      hasSignedUrl: Boolean(fileIdPayload.signedUrl),
-      hasSignedQuery: Boolean(fileIdPayload.signedQuery && Object.keys(fileIdPayload.signedQuery).length),
+      hasContentSha256: Boolean(fileIdPayload.contentSha256),
+      hasChecksumMode: Boolean(fileIdPayload.checksumMode),
+      hasOperationId: Boolean(fileIdPayload.operationId),
       signatureLength: typeof fileIdPayload.signature === 'string' ? fileIdPayload.signature.length : 0
     },
     reconstructedQuery: searchParamsToObject(params)
   });
-}
-
-/**
- * Builds the S3 object URL from either payload host metadata or config fallback.
- *
- * @param {{protocol?: string, host?: string, pathStyle?: string}} fileIdPayload Decrypted payload.
- * @param {string} objectId Requested object key.
- * @returns {string} Absolute object URL without query string.
- */
-function buildObjectUrl(fileIdPayload, objectId) {
-  if (fileIdPayload.host) {
-    const protocol = (fileIdPayload.protocol || 'https:').replace(/:$/, '');
-    if (fileIdPayload.pathStyle === 'path') {
-      return `${protocol}://${fileIdPayload.host}/${config.get('aws.bucket')}/${objectId}`;
-    }
-    return `${protocol}://${fileIdPayload.host}/${objectId}`;
-  }
-
-  if (config.has('aws.endpoint') && config.get('aws.endpoint')) {
-    return `${config.get('aws.endpoint').replace(/\/$/, '')}/${config.get('aws.bucket')}/${objectId}`;
-  }
-
-  return `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${objectId}`;
 }
 
 /**
@@ -385,8 +350,6 @@ router.post('/', [
   s3Upload,
   (req, res) => {
     const s3Url = new URL(req.s3Url);
-    const bucketPrefix = `/${config.get('aws.bucket')}/`;
-    const pathStyle = s3Url.pathname.indexOf(bucketPrefix) === 0 ? 'path' : 'virtual';
     const s3Item = `/${req.file.filename}`;
     const requestDate = s3Url.searchParams.get('X-Amz-Date');
     const fileIdPayload = {
@@ -396,10 +359,9 @@ router.post('/', [
       expires: s3Url.searchParams.get('X-Amz-Expires'),
       signedHeaders: s3Url.searchParams.get('X-Amz-SignedHeaders'),
       securityToken: s3Url.searchParams.get('X-Amz-Security-Token'),
-      protocol: s3Url.protocol,
-      host: s3Url.host,
-      pathStyle,
-      signedQuery: searchParamsToObject(s3Url.searchParams)
+      contentSha256: s3Url.searchParams.get('X-Amz-Content-Sha256'),
+      checksumMode: s3Url.searchParams.get('x-amz-checksum-mode'),
+      operationId: s3Url.searchParams.get('x-id')
     };
     const fileId = encrypt(JSON.stringify(fileIdPayload));
 
@@ -446,31 +408,6 @@ router.get('/:id', async (req, res, next) => {
     });
   }
 
-  const objectUrl = buildObjectUrl(fileIdPayload, req.params.id);
-
-  // For compact modern ids, replay all original signed query params.
-  if (fileIdPayload.signedQuery && Object.keys(fileIdPayload.signedQuery).length) {
-    const params = new URLSearchParams(fileIdPayload.signedQuery);
-    logSignatureDiagnostics(objectUrl, req.params.id, requestDate, fileIdPayload, params);
-    logger.log('info', 'getting file-vault url');
-    await getRequest(`${objectUrl}?${params.toString()}`, res, next);
-    return;
-  }
-
-  // For modern ids, replay the exact presigned URL to avoid any signature drift.
-  if (fileIdPayload.signedUrl) {
-    const signedObjectPathname = new URL(fileIdPayload.signedUrl).pathname;
-    if (!signedObjectPathname.endsWith(`/${req.params.id}`)) {
-      return next({
-        code: 'FileGetInvalidRequest'
-      });
-    }
-
-    logger.log('info', 'getting file-vault url');
-    await getRequest(fileIdPayload.signedUrl, res, next);
-    return;
-  }
-
   const requestDay = requestDate.split('T')[0];
   const credential = fileIdPayload.credential
     || `${config.get('aws.accessKeyId')}/${requestDay}/${config.get('aws.region')}/s3/aws4_request`;
@@ -486,6 +423,25 @@ router.get('/:id', async (req, res, next) => {
 
   if (fileIdPayload.securityToken) {
     params.append('X-Amz-Security-Token', fileIdPayload.securityToken);
+  }
+
+  if (fileIdPayload.contentSha256) {
+    params.append('X-Amz-Content-Sha256', fileIdPayload.contentSha256);
+  }
+
+  if (fileIdPayload.checksumMode) {
+    params.append('x-amz-checksum-mode', fileIdPayload.checksumMode);
+  }
+
+  if (fileIdPayload.operationId) {
+    params.append('x-id', fileIdPayload.operationId);
+  }
+
+  let objectUrl;
+  if (config.has('aws.endpoint') && config.get('aws.endpoint')) {
+    objectUrl = `${config.get('aws.endpoint').replace(/\/$/, '')}/${config.get('aws.bucket')}/${req.params.id}`;
+  } else {
+    objectUrl = `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}`;
   }
 
   logSignatureDiagnostics(objectUrl, req.params.id, requestDate, fileIdPayload, params);
