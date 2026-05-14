@@ -220,6 +220,85 @@ function decrypt(text) {
 }
 
 /**
+ * Parses decrypted file id payload, supporting both modern JSON payload and legacy signature-only format.
+ *
+ * @param {string} decryptedId Decrypted file-vault id content.
+ * @returns {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string}|null}
+ */
+function parseFileIdPayload(decryptedId) {
+  try {
+    const parsed = JSON.parse(decryptedId);
+    if (parsed && typeof parsed === 'object' && typeof parsed.signature === 'string' && parsed.signature) {
+      return {
+        signature: parsed.signature,
+        algorithm: typeof parsed.algorithm === 'string' ? parsed.algorithm : undefined,
+        credential: typeof parsed.credential === 'string' ? parsed.credential : undefined,
+        expires: typeof parsed.expires === 'string' ? parsed.expires : undefined,
+        signedHeaders: typeof parsed.signedHeaders === 'string' ? parsed.signedHeaders : undefined,
+        securityToken: typeof parsed.securityToken === 'string' ? parsed.securityToken : undefined
+      };
+    }
+  }
+  catch (err) {
+    // Legacy file ids are plain signatures and are handled by fallback logic.
+  }
+
+  if (typeof decryptedId === 'string' && decryptedId.length > 0) {
+    return {
+      signature: decryptedId
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Converts URLSearchParams to a plain object for deterministic debug logging.
+ *
+ * @param {URLSearchParams} params URL search params.
+ * @returns {Record<string, string>} Plain object containing all entries.
+ */
+function searchParamsToObject(params) {
+  const result = {};
+  for (const [key, value] of params.entries()) {
+    result[key] = value;
+  }
+  return result;
+}
+
+/**
+ * Emits DEBUG-only diagnostics for reconstructed S3 signature inputs.
+ *
+ * @param {string} objectUrl S3 object URL without query.
+ * @param {string} objectId Requested object key.
+ * @param {string} requestDate Date query parameter supplied to file-vault.
+ * @param {{signature: string, algorithm?: string, credential?: string, expires?: string, signedHeaders?: string, securityToken?: string}} fileIdPayload Decrypted payload.
+ * @param {URLSearchParams} params Reconstructed URL params sent to S3.
+ * @returns {void}
+ */
+function logSignatureDiagnostics(objectUrl, objectId, requestDate, fileIdPayload, params) {
+  if (!process.env.DEBUG) {
+    return;
+  }
+
+  logger.debug('file-vault signature diagnostics (GET /:id)');
+  logger.debug({
+    objectId,
+    objectUrl,
+    requestDate,
+    payload: {
+      hasAlgorithm: Boolean(fileIdPayload.algorithm),
+      hasCredential: Boolean(fileIdPayload.credential),
+      hasExpires: Boolean(fileIdPayload.expires),
+      hasSignedHeaders: Boolean(fileIdPayload.signedHeaders),
+      hasSecurityToken: Boolean(fileIdPayload.securityToken),
+      signatureLength: typeof fileIdPayload.signature === 'string' ? fileIdPayload.signature.length : 0
+    },
+    reconstructedQuery: searchParamsToObject(params)
+  });
+}
+
+/**
  * Performs a binary GET request and writes the upstream response through.
  *
  * @param {string} url Target URL.
@@ -254,8 +333,16 @@ router.post('/', [
   (req, res) => {
     const s3Url = new URL(req.s3Url);
     const s3Item = `/${req.file.filename}`;
-    const Date = s3Url.searchParams.get('X-Amz-Date');
-    const fileId = encrypt(s3Url.searchParams.get('X-Amz-Signature'));
+    const requestDate = s3Url.searchParams.get('X-Amz-Date');
+    const fileIdPayload = {
+      signature: s3Url.searchParams.get('X-Amz-Signature'),
+      algorithm: s3Url.searchParams.get('X-Amz-Algorithm'),
+      credential: s3Url.searchParams.get('X-Amz-Credential'),
+      expires: s3Url.searchParams.get('X-Amz-Expires'),
+      signedHeaders: s3Url.searchParams.get('X-Amz-SignedHeaders'),
+      securityToken: s3Url.searchParams.get('X-Amz-Security-Token')
+    };
+    const fileId = encrypt(JSON.stringify(fileIdPayload));
 
     if (process.env.DEBUG) {
       logger.debug(s3Url.searchParams.get('X-Amz-Signature'));
@@ -265,7 +352,7 @@ router.post('/', [
     debug('returning file-vault url');
 
     const responseData = {
-      url: `${config.get('file-vault-url')}/file${s3Item}?date=${Date}&id=${fileId}`
+      url: `${config.get('file-vault-url')}/file${s3Item}?date=${requestDate}&id=${fileId}`
     };
 
     if (config.get('returnOriginalSignedUrl') === 'yes') {
@@ -286,11 +373,12 @@ router.get('/:id', async (req, res, next) => {
     });
   }
 
-  let decryptedId;
-  let requestDay;
+  let fileIdPayload;
   try {
-    decryptedId = decrypt(reqId);
-    requestDay = requestDate.split('T')[0];
+    fileIdPayload = parseFileIdPayload(decrypt(reqId));
+    if (!fileIdPayload) {
+      throw new Error('invalid file id payload');
+    }
   }
   catch (err) {
     logger.log('error', err);
@@ -299,14 +387,22 @@ router.get('/:id', async (req, res, next) => {
     });
   }
 
-  let params = `?X-Amz-Algorithm=${config.get('aws.amzAlgorithm')}`;
-  params += `&X-Amz-Credential=${config.get('aws.accessKeyId')}`;
-  params += `%2F${requestDay}`;
-  params += `%2F${config.get('aws.region')}%2Fs3%2Faws4_request`;
-  params += `&X-Amz-Date=${requestDate}`;
-  params += `&X-Amz-Expires=${parseInt(config.get('aws.expiry'))}`;
-  params += `&X-Amz-Signature=${decryptedId}`;
-  params += '&X-Amz-SignedHeaders=host';
+  const requestDay = requestDate.split('T')[0];
+  const credential = fileIdPayload.credential
+    || `${config.get('aws.accessKeyId')}/${requestDay}/${config.get('aws.region')}/s3/aws4_request`;
+
+  const params = new URLSearchParams({
+    'X-Amz-Algorithm': fileIdPayload.algorithm || config.get('aws.amzAlgorithm'),
+    'X-Amz-Credential': credential,
+    'X-Amz-Date': requestDate,
+    'X-Amz-Expires': fileIdPayload.expires || String(parseInt(config.get('aws.expiry'))),
+    'X-Amz-Signature': fileIdPayload.signature,
+    'X-Amz-SignedHeaders': fileIdPayload.signedHeaders || 'host'
+  });
+
+  if (fileIdPayload.securityToken) {
+    params.append('X-Amz-Security-Token', fileIdPayload.securityToken);
+  }
 
   let objectUrl;
   if (config.has('aws.endpoint') && config.get('aws.endpoint')) {
@@ -315,8 +411,10 @@ router.get('/:id', async (req, res, next) => {
     objectUrl = `https://${config.get('aws.bucket')}.s3.${config.get('aws.region')}.amazonaws.com/${req.params.id}`;
   }
 
+  logSignatureDiagnostics(objectUrl, req.params.id, requestDate, fileIdPayload, params);
+
   logger.log('info', 'getting file-vault url');
-  await getRequest(`${objectUrl}${params}`, res, next);
+  await getRequest(`${objectUrl}?${params.toString()}`, res, next);
 })
 
 if (config.allowGenerateLinkRoute === 'yes') {
