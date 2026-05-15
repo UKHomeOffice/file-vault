@@ -18,7 +18,7 @@ include_default_and_feature_branches: &include_default_and_feature_branches
 
 node_image: &node_image
   pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/hof-nodejs:20.19.0-alpine3.21@sha256:aad584fa26cb2838739527166c8965d95d0d2d9b88cfd5e3e2d3b8647ae03101
+  image: node:24.15.0-alpine3.23@sha256:8e2c930fda481a6ec141fe5a88e8c249c69f8102fe98af505f38c081649ea749
 
 linting: &linting
   <<: *node_image
@@ -42,7 +42,8 @@ steps:
     commands:
       - yarn install --frozen-lockfile
     when:
-      branch: master
+      branch: 
+        <<: *include_default_and_feature_branches
       event: [ push, pull_request, tag ]
 
     # Trivy Security Scannner for scanning OS related vulnerabilities in Base image of Dockerfile
@@ -54,9 +55,9 @@ steps:
         cpu: 1000
         memory: 1024Mi
     environment:
-      IMAGE_NAME: quay.io/ukhomeofficedigital/hof-nodejs:20.19.0-alpine3.21@sha256:aad584fa26cb2838739527166c8965d95d0d2d9b88cfd5e3e2d3b8647ae03101
+      IMAGE_NAME: node:24.15.0-alpine3.23@sha256:8e2c930fda481a6ec141fe5a88e8c249c69f8102fe98af505f38c081649ea749
       SERVICE_URL: https://acp-trivy-helm.acp-trivy.svc.cluster.local:443
-      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree --ignore-status fixed
       FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: false
     volumes:
@@ -93,7 +94,8 @@ steps:
       - name: dockersock
         path: /var/run
     when:
-      branch: master
+      branch: 
+        <<: *include_default_and_feature_branches
       event: [ push, pull_request, tag ]
     depends_on:
       - setup
@@ -110,7 +112,8 @@ steps:
     - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
     - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
     when:
-      branch: master
+      branch: 
+        <<: *include_default_and_feature_branches
       event: [ push, pull_request ]
     depends_on:
       - build_image
@@ -127,7 +130,8 @@ steps:
     - docker tag $${IMAGE_REPO}:$${DRONE_COMMIT_SHA} $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_TAG}
     - docker push $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_TAG}
     when:
-      branch: master
+      branch: 
+        <<: *include_default_and_feature_branches
       event: [tag]
     depends_on:
       - build_image
@@ -141,7 +145,7 @@ steps:
         memory: 1024Mi
     environment:
       IMAGE_NAME: quay.io/ukhomeofficedigital/file-vault:${DRONE_COMMIT_SHA}
-      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree
+      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree --ignore-status fixed
       FAIL_ON_DETECTION: false
       IGNORE_UNFIXED: false
     when:

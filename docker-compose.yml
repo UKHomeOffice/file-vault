@@ -1,23 +1,29 @@
-version: "2"
 services:
   app:
     build: .
     environment:
       - HOST=localhost
       - PORT=3000
-      - CLAMAV_REST_URL=http://clamav-rest:8080/scan
+      - CLAMAV_REST_URL=http://clamav-rest:9000/scan
       - AWS_ACCESS_KEY_ID=aws-access-key-id
       - AWS_SECRET_ACCESS_KEY=aws-secret-access-key
       - AWS_REGION=eu-west-1
       - AWS_SIGNATURE_VERSION=v4
       - AWS_BUCKET=aws-bucket
+      - AWS_ENDPOINT=http://local-s3:80
       - AWS_EXPIRY_TIME=600
+      - AWS_PASSWORD=aws-password
       - NODE_ENV=development
+      - ALLOW_GENERATE_LINK_ROUTE=no
+    depends_on:
+      clamav-rest:
+        condition: service_healthy
     ports:
       - "3000:3000"
 
   nginx-proxy:
-    image: quay.io/ukhomeofficedigital/nginx-proxy:v1.5.1
+    profiles: ["proxy"]
+    image: quay.io/ukhomeofficedigital/nginx-proxy:v4.4.8
     environment:
       - PROXY_SERVICE_HOST=proxy
       - PROXY_SERVICE_PORT=3001
@@ -29,7 +35,8 @@ services:
       - "80:80"
 
   proxy:
-    image: quay.io/ukhomeofficedigital/go-keycloak-proxy:v2.0.1
+    profiles: ["proxy"]
+    image: quay.io/ukhomeofficedigital/go-keycloak-proxy:v2.0.3-schema2
     environment:
       - PROXY_CLIENT_SECERT=proxy-client-secret
       - PROXY_CLIENT_ID=proxy-client-id
@@ -47,14 +54,48 @@ services:
     ports:
       - "3001:3001"
 
-  clamav-server:
-    image: mkodockx/docker-clamav
-    ports:
-      - "3310:3310"
-
   clamav-rest:
-    image: lokori/clamav-rest
-    environment:
-      - CLAMD_HOST=clamav-server
+    image: ajilaag/clamav-rest:0.5.3
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 9000"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     ports:
-      - "8080:8080"
+      - "8080:9000"
+
+  local-s3:
+    image: luofuxiang/local-s3:latest
+    ports:
+      - "127.0.0.1:9080:80"
+    volumes:
+      - local-s3-data:/data
+
+  local-s3-init:
+    image: amazon/aws-cli:2.17.43
+    depends_on:
+      - local-s3
+    environment:
+      - AWS_ACCESS_KEY_ID=aws-access-key-id
+      - AWS_SECRET_ACCESS_KEY=aws-secret-access-key
+      - AWS_DEFAULT_REGION=eu-west-1
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until aws --endpoint-url http://local-s3:80 s3api list-buckets >/dev/null 2>&1; do
+          sleep 1
+        done
+
+        if aws --endpoint-url http://local-s3:80 s3api head-bucket --bucket aws-bucket >/dev/null 2>&1; then
+          echo "Bucket aws-bucket already exists"
+        else
+          aws --endpoint-url http://local-s3:80 s3api create-bucket --bucket aws-bucket >/dev/null
+          echo "Bucket aws-bucket created"
+        fi
+
+        echo "Bucket aws-bucket is ready"
+
+volumes:
+  local-s3-data:

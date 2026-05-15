@@ -2,3 +2,10 @@ node_modules
 uploads
 .travis.yml
 .idea/
+.git
+.github
+coverage
+test
+.drone.yml
+.drone.yml.sig
+.gitignore

@@ -9,8 +9,8 @@
     "accessKeyId": "AWS_ACCESS_KEY_ID",
     "secretAccessKey": "AWS_SECRET_ACCESS_KEY",
     "kmsKeyId": "AWS_KMS_KEY_ID",
+    "endpoint": "AWS_ENDPOINT",
     "region": "AWS_REGION",
-    "signatureVersion": "AWS_SIGNATURE_VERSION",
     "bucket": "AWS_BUCKET",
     "expiry": "AWS_EXPIRY_TIME",
     "password": "AWS_PASSWORD"

@@ -3,18 +3,17 @@
 
 const express = require('express');
 const morgan = require('morgan');
-const _ = require('lodash');
 const app = express();
 const config = require('config');
 const logger = require('./logger');
 
-morgan.token('id', req => _.get(req, 'session.id', 'filevault'));
+morgan.token('id', req => req.session?.id ?? 'filevault');
 
 app.use(morgan('sessionId=:id ' + morgan.combined, {
   stream: logger.stream,
   skip: (req, res) => !process.env.DEBUG &&
     (
-      res.statusCode >= 300 || !_.get(req, 'session.id') ||
+      res.statusCode >= 300 || !req.session?.id ||
       ['/healthz'].some(v => req.originalUrl.includes(v))
     )
 }));
