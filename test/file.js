@@ -23,7 +23,7 @@ function parseFileVaultUrl(fileVaultUrl) {
 }
 
 async function uploadDocumentWithSignedUrl() {
-  process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "returnOriginalSignedUrl": "yes"}';
+  process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif", "returnOriginalSignedUrl": "yes"}';
 
   nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
   nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
@@ -53,7 +53,7 @@ describe('/file', () => {
     delete process.env.DEBUG;
     delete process.env.AWS_PASSWORD;
     delete process.env.FILE_EXTENSION_WHITELIST;
-    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": ""}';
+    process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif"}';
   });
 
   afterEach(() => {
@@ -169,6 +169,9 @@ describe('/file', () => {
     describe('data', () => {
 
       it('returns an error when virus scanner unavailable', async () => {
+        const axiosMock = jest.fn().mockRejectedValue(new Error('scanner unavailable'));
+        jest.doMock('axios', () => axiosMock);
+
         await supertest(require('../app').app)
           .post('/file')
           .attach('document', 'test/fixtures/cat.gif')
@@ -206,7 +209,7 @@ describe('/file', () => {
         });
 
         it('passes configured fileSize to virus scanner request', async () => {
-          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "fileSize": "98765"}';
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif", "fileSize": "98765"}';
 
           const axiosMock = jest.fn().mockResolvedValue({ data: 'Everything ok : true' });
           jest.doMock('axios', () => axiosMock);
@@ -226,7 +229,7 @@ describe('/file', () => {
         });
 
         it('returns error when file exceeds fileSize in virus scanner request', async () => {
-          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "fileSize": "100"}';
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif", "fileSize": "100"}';
 
           const axiosMock = jest.fn().mockResolvedValue({ data: 'Everything ok : false' });
           jest.doMock('axios', () => axiosMock);
@@ -271,6 +274,64 @@ describe('/file', () => {
             .expect(400, {
               code: 'FileExtensionNotAllowed'
             });
+        });
+
+        it('returns an error and does not scan when file extension whitelist is empty', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": ""}';
+          const axiosMock = jest.fn();
+          jest.doMock('axios', () => axiosMock);
+
+          await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(400, {
+              code: 'FileExtensionNotAllowed'
+            });
+
+          expect(axiosMock).not.toHaveBeenCalled();
+        });
+
+        it('returns an error and does not scan when double extension ends with a blocked file type', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif,jpg,jpeg,png,pdf"}';
+          const axiosMock = jest.fn();
+          jest.doMock('axios', () => axiosMock);
+
+          await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif', { filename: 'malicious.png.php' })
+            .expect(400, {
+              code: 'FileExtensionNotAllowed'
+            });
+
+          expect(axiosMock).not.toHaveBeenCalled();
+        });
+
+        it('returns an error and does not scan when double extension hides a blocked file type', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif,jpg,jpeg,png,pdf"}';
+          const axiosMock = jest.fn();
+          jest.doMock('axios', () => axiosMock);
+
+          await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif', { filename: 'malicious.php.png' })
+            .expect(400, {
+              code: 'FileExtensionNotAllowed'
+            });
+
+          expect(axiosMock).not.toHaveBeenCalled();
+        });
+
+        it('normalises whitespace and casing in file extension whitelist entries', async () => {
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": " JPG, PDF , GiF "}';
+          nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
+          nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
+
+          const res = await supertest(require('../app').app)
+            .post('/file')
+            .attach('document', 'test/fixtures/cat.gif')
+            .expect(200);
+
+          assert.ok(res.body.url.indexOf('http://localhost/file/') !== -1);
         });
 
         it('returns when uppercase file extension is used', async () => {
@@ -318,7 +379,7 @@ describe('/file', () => {
         });
 
         it('returns the original signed url when configured', async () => {
-          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "returnOriginalSignedUrl": "yes"}';
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif", "returnOriginalSignedUrl": "yes"}';
 
           nock('http://localhost:8080').post('/scan').once().reply(200, 'Everything ok : true');
           nock('https://testbucket.s3.eu-west-1.amazonaws.com').put(/.*/).reply(200);
@@ -461,7 +522,9 @@ describe('/file', () => {
         });
 
         it('uses the configured timeout when timeout config is valid', async () => {
-          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "", "timeout": "20"}';
+          process.env.NODE_CONFIG = '{"aws": {"password":"atest"}, "fileTypes": "gif", "timeout": "20"}';
+          const axiosMock = jest.fn().mockRejectedValue(new Error('scanner unavailable'));
+          jest.doMock('axios', () => axiosMock);
 
           await supertest(require('../app').app)
             .post('/file')
@@ -469,6 +532,10 @@ describe('/file', () => {
             .expect(400, {
               code: 'VirusScanFailed'
             });
+
+          expect(axiosMock).toHaveBeenCalledWith(expect.objectContaining({
+            timeout: 20000
+          }));
         });
       });
 

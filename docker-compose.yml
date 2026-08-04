@@ -15,6 +15,7 @@ services:
       - AWS_PASSWORD=aws-password
       - NODE_ENV=development
       - ALLOW_GENERATE_LINK_ROUTE=no
+      - FILE_EXTENSION_WHITELIST=gif,jpg,jpeg,png,pdf
     depends_on:
       clamav-rest:
         condition: service_healthy
