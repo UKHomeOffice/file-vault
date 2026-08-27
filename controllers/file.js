@@ -133,7 +133,7 @@ function checkExtension(req, res, next) {
   const uploadedFileExtensions = getFilenameExtensions(req.file.originalname);
   const uploadedFileExtension = uploadedFileExtensions[uploadedFileExtensions.length - 1];
   const fileAllowed = uploadedFileExtension && allowedExtensions.has(uploadedFileExtension)
-    && !hasBlockedNestedExtension(uploadedFileExtensions);
+    && !blockedNestedExtensions.has(uploadedFileExtension) && !hasBlockedNestedExtension(uploadedFileExtensions);
 
   if (fileAllowed) {
     debug('passed file extension check');
