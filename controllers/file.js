@@ -46,6 +46,75 @@ const upload = multer({
   dest: config.get('fileDestination')
 });
 
+// Explicitly block harmful MIME types that we wouldn't ever expect to be uploaded, even if they are in the allowed list. This is a defense-in-depth measure.
+const blockedNestedExtensions = new Set([
+  'bat',
+  'bash',
+  'cgi',
+  'cmd',
+  'dll',
+  'exe',
+  'htm',
+  'html',
+  'js',
+  'mjs',
+  'phar',
+  'php',
+  'phtml',
+  'pl',
+  'ps1',
+  'py',
+  'rb',
+  'sh'
+]);
+
+/**
+ * Parses the configured extension whitelist into normalized extension names.
+ *
+ * @returns {Set<string>} Allowed extension names without leading dots.
+ */
+function getAllowedExtensions() {
+  const fileTypes = config.get('fileTypes');
+
+  if (typeof fileTypes !== 'string') {
+    return new Set();
+  }
+
+  return new Set(fileTypes.split(',')
+    .map((allowedExtension) => allowedExtension.trim().toLowerCase().replace(/^\.+/, ''))
+    .filter(Boolean));
+}
+
+/**
+ * Extracts extension-like suffixes from a client supplied filename.
+ *
+ * @param {string} filename Uploaded original filename.
+ * @returns {string[]} Normalized suffixes after the first filename segment.
+ */
+function getFilenameExtensions(filename) {
+  const filenameParts = path.basename(filename || '')
+    .toLowerCase()
+    .split('.')
+    .filter(Boolean);
+
+  if (filenameParts.length < 2) {
+    return [];
+  }
+
+  return filenameParts.slice(1);
+}
+
+/**
+ * Checks whether any non-final suffix is a dangerous executable/script extension.
+ *
+ * @param {string[]} extensions Filename suffixes.
+ * @returns {boolean} True when a nested blocked suffix is present.
+ */
+function hasBlockedNestedExtension(extensions) {
+  return extensions.slice(0, -1)
+    .some((extension) => blockedNestedExtensions.has(extension));
+}
+
 /**
  * Validates an uploaded file extension against the configured whitelist.
  *
@@ -55,27 +124,26 @@ const upload = multer({
  * @returns {void}
  */
 function checkExtension(req, res, next) {
-  const fileTypes = config.get('fileTypes');
-
-  if (fileTypes) {
-    const uploadedFileExtension = path.extname(req.file.originalname).replace('.', '').toLowerCase();
-    const fileAllowed = fileTypes.split(',')
-      .find((allowedExtension) => uploadedFileExtension === allowedExtension);
-    if (fileAllowed) {
-
-      debug('passed file extension check');
-      next();
-    } else {
-
-      debug('failed file extension check');
-      next({
-        code: 'FileExtensionNotAllowed'
-      });
-    }
-  } else {
+  if (!req.file) {
     debug('passed file extension check');
-    next();
+    return next();
   }
+
+  const allowedExtensions = getAllowedExtensions();
+  const uploadedFileExtensions = getFilenameExtensions(req.file.originalname);
+  const uploadedFileExtension = uploadedFileExtensions[uploadedFileExtensions.length - 1];
+  const fileAllowed = uploadedFileExtension && allowedExtensions.has(uploadedFileExtension)
+    && !blockedNestedExtensions.has(uploadedFileExtension) && !hasBlockedNestedExtension(uploadedFileExtensions);
+
+  if (fileAllowed) {
+    debug('passed file extension check');
+    return next();
+  }
+
+  debug('failed file extension check');
+  return next({
+    code: 'FileExtensionNotAllowed'
+  });
 }
 
 /**

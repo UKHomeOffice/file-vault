@@ -154,7 +154,7 @@ The service uses the `config` package and reads the following environment variab
 | `AWS_EXPIRY_TIME` | No | `3600` | Presigned URL expiry in seconds |
 | `REQUEST_TIMEOUT` | No | `15000` ms effective fallback if unset or invalid | Timeout for ClamAV and retrieval HTTP requests |
 | `STORAGE_FILE_DESTINATION` | No | `uploads` | Temporary upload directory |
-| `FILE_EXTENSION_WHITELIST` | No | empty | Comma-separated list of allowed file extensions |
+| `FILE_EXTENSION_WHITELIST` | Yes | empty, which rejects uploads | Comma-separated list of allowed file extensions. Uploads are rejected when this is empty. The final filename extension must be allowlisted, and dangerous nested extensions such as `.php` are rejected even when the client supplies an allowed multipart MIME type. |
 | `MAX_FILE_SIZE` | No | none | Available config value for scan-size limits |
 | `ALLOW_GENERATE_LINK_ROUTE` | No | `no` | Enables `GET /file/generate-link/:id` |
 | `RETURN_ORIGINAL_SIGNED_URL` | No | `no` | Includes the raw S3 presigned URL in upload responses |
