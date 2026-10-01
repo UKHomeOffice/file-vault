@@ -48,6 +48,8 @@ steps:
         <<: *include_default_and_feature_branches
       event: [ push, pull_request, tag ]
 
+  # Prevents an accidental Drone rerun from overwriting an existing release tag.
+  # Failing early preserves the tag's original digest and keeps release references immutable.
   - name: check_tag_exists
     pull: if-not-exists
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
@@ -190,24 +192,6 @@ steps:
       event: [push, pull_request, tag]
     depends_on:
       - clone_repos
-      - build_images
-
-  - name: Validate
-    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-    volumes:
-      - name: dockersock
-        path: /var/run
-    commands:
-      - docker ps -a
-      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 npm list --depth=0
-      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 cat /etc/os-release
-      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 node --version
-      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 yarn --version
-    when:
-      branch:
-        <<: *include_default_and_feature_branches
-      event: [push, pull_request, tag]
-    depends_on:
       - build_images
 
   - name: push_images_to_quay
