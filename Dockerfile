@@ -31,6 +31,6 @@ USER 999
 HEALTHCHECK --interval=5m --timeout=3s \
  CMD curl --fail http://localhost:8080 || exit 1
 
-CMD ["sh", "/app/run.sh"]
+CMD yarn start
 
 EXPOSE 8080
