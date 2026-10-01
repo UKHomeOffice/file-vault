@@ -48,6 +48,20 @@ steps:
         <<: *include_default_and_feature_branches
       event: [ push, pull_request, tag ]
 
+  - name: clone_repos
+    image: alpine/git
+    environment:
+      DRONE_GIT_USERNAME:
+        from_secret: drone_git_username
+      DRONE_GIT_TOKEN:
+        from_secret: drone_git_token
+    commands:
+      - git clone https://$${DRONE_GIT_USERNAME}:$${DRONE_GIT_TOKEN}@github.com/UKHomeOfficeForms/hof-services-config.git
+    when:
+      branch:
+        <<: *include_default_and_feature_branches
+      event: [push, pull_request, tag]
+
     # Trivy Security Scannner for scanning OS related vulnerabilities in Base image of Dockerfile
   - name: scan_base_image_os
     pull: always
@@ -59,14 +73,17 @@ steps:
     environment:
       IMAGE_NAME: *node_image_name
       SERVICE_URL: https://acp-trivy-helm.acp-trivy.svc.cluster.local:443
-      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree --ignore-status fixed
+      SEVERITY: MEDIUM,HIGH,CRITICAL --vuln-type os,library --dependency-tree
       FAIL_ON_DETECTION: true
       IGNORE_UNFIXED: false
+      ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
     volumes:
       - name: dockersock
         path: /root/.dockersock
     when:
       event: [push, pull_request, tag]
+    depends_on:
+      - clone_repos
 
   - name: linting
     <<: *linting
@@ -106,7 +123,7 @@ steps:
     depends_on:
       - setup
 
-  - name: image_to_quay
+  - name: push_images_to_quay
     pull: if-not-exists
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
     environment:
@@ -124,16 +141,19 @@ steps:
       -t $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}
       $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64
       $${IMAGE_URL}/$${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-arm64
+    volumes:
+      - name: dockersock
+        path: /var/run
     when:
       branch: 
         <<: *include_default_and_feature_branches
-      event: [ push, pull_request ]
+      event: [ push, pull_request, tag ]
     depends_on:
       - scan_node_packages_amd64
       - scan_node_packages_arm64
 
   # Automatically push Docker image to Quay when a Git tag is created on the master branch, Users should reference the image using the format: image_repo_url:tag@digestsha for immutability and traceability.
-  - name: push_image_tag_to_quay
+  - name: push_tag_to_quay
     pull: if-not-exists
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
     environment:
@@ -147,7 +167,7 @@ steps:
         <<: *include_default_and_feature_branches
       event: [tag]
     depends_on:
-      - image_to_quay
+      - push_images_to_quay
 
   - name: scan_node_packages_amd64
     pull: always
@@ -158,15 +178,17 @@ steps:
         memory: 1024Mi
     environment:
       IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}-amd64
-      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree --ignore-status fixed
+      SEVERITY: MEDIUM,HIGH,CRITICAL --vuln-type os,library --dependency-tree
       FAIL_ON_DETECTION: true
       IGNORE_UNFIXED: false
+      ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
     volumes:
       - name: dockersock
         path: /root/.dockersock
     when:
       event: [push, pull_request, tag]
     depends_on:
+      - clone_repos
       - build_images
 
   - name: scan_node_packages_arm64
@@ -178,13 +200,33 @@ steps:
         memory: 1024Mi
     environment:
       IMAGE_NAME: file-vault:${DRONE_COMMIT_SHA}-arm64
-      SEVERITY: MEDIUM,HIGH,CRITICAL  --dependency-tree --ignore-status fixed
+      SEVERITY: MEDIUM,HIGH,CRITICAL --vuln-type os,library --dependency-tree
       FAIL_ON_DETECTION: true
       IGNORE_UNFIXED: false
+      ALLOW_CVE_LIST_FILE: hof-services-config/infrastructure/trivy/.trivyignore.yaml
     volumes:
       - name: dockersock
         path: /root/.dockersock
     when:
+      event: [push, pull_request, tag]
+    depends_on:
+      - clone_repos
+      - build_images
+
+  - name: Validate
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - docker ps -a
+      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 npm list --depth=0
+      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 cat /etc/os-release
+      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 node --version
+      - docker run --rm $${IMAGE_REPO}:$${DRONE_COMMIT_SHA}-amd64 yarn --version
+    when:
+      branch:
+        <<: *include_default_and_feature_branches
       event: [push, pull_request, tag]
     depends_on:
       - build_images
