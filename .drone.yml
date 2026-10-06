@@ -57,7 +57,7 @@ steps:
       DOCKER_PASSWORD:
         from_secret: DOCKER_PASSWORD
     commands:
-      - >
+      - |
         if [ -z "$${DRONE_TAG}" ]; then
           echo "Not a tag build; skipping tag existence check."
           exit 0
