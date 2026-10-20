@@ -16,7 +16,7 @@ include_default_and_feature_branches: &include_default_and_feature_branches
     - master
     - feature/*
 
-node_image_name: &node_image_name quay.io/ukhomeofficedigital/hof-nodejs:24.21.0-alpine3.24-v7@sha256:793f595eb64064ab6d007ca3509c731a1ff9d36728aa12e127e19271075575a1
+node_image_name: &node_image_name quay.io/ukhomeofficedigital/hof-nodejs:24.21.0-alpine3.24-v9@sha256:baf6fee695730fcede4a6dd89390b1756ce5b26ce45b39cca3c7cdc63e91a443
 
 node_image: &node_image
   pull: if-not-exists
@@ -33,6 +33,12 @@ unit_tests: &unit_tests
     NOTIFY_STUB: true
   commands:
     - yarn run test:unit
+
+sonar_scanner: &sonar_scanner
+  pull: always
+  image: quay.io/ukhomeofficedigital/sonar-scanner:latest
+  commands:
+    - sonar-scanner -Dproject.settings=./sonar-project.properties -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=300
 
 trigger:
   branch:
