@@ -134,6 +134,16 @@ steps:
       event: [push, pull_request]
     depends_on:
       - setup
+    
+  - name: sonar_scanner
+    <<: *sonar_scanner
+    when:
+      branch:
+        <<: *include_default_and_feature_branches
+      event: [push, pull_request]
+    depends_on:
+      - linting
+      - unit_tests
 
   - name: build_images
     pull: if-not-exists
